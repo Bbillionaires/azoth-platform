@@ -40,7 +40,7 @@ export function Topbar({ title, children }: { title: string; children?: React.Re
     <div className="topbar">
       <span style={{ fontSize: 15, fontWeight: 700, letterSpacing: '-.3px', flex: 1 }}>{title}</span>
       {children}
-      <span className="mono" style={{ fontSize: 10, color: 'var(--t3)', background: 'rgba(255,255,255,.04)', padding: '3px 8px', borderRadius: 5, border: '1px solid var(--br)' }}>Nexus</span>
+      <span className="mono" style={{ fontSize: 10, color: 'var(--t3)', background: 'rgba(255,255,255,.04)', padding: '3px 8px', borderRadius: 5, border: '1px solid var(--br)' }}>AZOTH</span>
     </div>
   )
 }

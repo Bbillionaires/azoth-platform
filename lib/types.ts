@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────
-//  Nexus Platform — Type System
+//  AZOTH Platform — Type System
 // ─────────────────────────────────────────
 
 export interface Workspace {

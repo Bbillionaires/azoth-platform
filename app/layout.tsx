@@ -4,7 +4,7 @@ import { AppProvider } from '@/context/AppContext'
 import { Sidebar } from '@/components/ui/Sidebar'
 
 export const metadata: Metadata = {
-  title: 'Nexus — Team Revenue Platform',
+  title: 'AZOTH — Team Revenue Platform',
   description: 'CRM · Campaigns · Team Inbox · Automations',
 }
 

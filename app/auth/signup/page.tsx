@@ -75,7 +75,7 @@ export default function SignupPage() {
               </div>
               {wsName && (
                 <div style={{ fontSize: 11.5, color: 'var(--t3)', background: 'var(--s3)', padding: '8px 12px', borderRadius: 'var(--r8)', border: '1px solid var(--br)' }}>
-                  Your URL: <span style={{ color: 'var(--acc)' }}>nexus.app/{wsName.toLowerCase().replace(/\s+/g,'-')}</span>
+                  Your URL: <span style={{ color: 'var(--acc)' }}>AZOTH.app/{wsName.toLowerCase().replace(/\s+/g,'-')}</span>
                 </div>
               )}
             </div>

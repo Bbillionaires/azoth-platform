@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────
-//  Nexus Security — Central Export + GDPR
+//  AZOTH Security — Central Export + GDPR
 // ─────────────────────────────────────────
 
 export * from './validate'
@@ -55,7 +55,7 @@ export async function exportContactData(contactId: number, workspaceId: string) 
 //  Security Checklist (for deployment)
 // ─────────────────────────────────────────
 export const SECURITY_CHECKLIST = `
-NEXUS PLATFORM — PRE-LAUNCH SECURITY CHECKLIST
+AZOTH Platform — PRE-LAUNCH SECURITY CHECKLIST
 ================================================
 
 AUTH + ACCESS

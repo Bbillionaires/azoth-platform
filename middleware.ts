@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 
 // ─────────────────────────────────────────
-//  Nexus Platform — Security Middleware
+//  AZOTH Platform — Security Middleware
 //
 //  Runs on EVERY request before any page or
 //  API handler. Handles:

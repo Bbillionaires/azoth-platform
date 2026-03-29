@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────
-//  Nexus — Input Validation & Sanitization
+//  AZOTH — Input Validation & Sanitization
 //
 //  Every field that touches the DB goes
 //  through these validators. Never trust

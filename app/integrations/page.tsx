@@ -18,7 +18,7 @@ const INTEGRATIONS = [
   { id:'calendly',   name:'Calendly',   icon:'📅', desc:'Book meetings → create contacts',      cat:'tools',      default:false },
 ]
 
-const API_KEY = 'nx_live_xK9mP2wQ7nR4vT8jL5sH3uA6bF1cN0eY'
+const API_KEY = 'azoth_live_xK9mP2wQ7nR4vT8jL5sH3uA6bF1cN0eY'
 
 export default function IntegrationsPage() {
   const { contacts, pipelines } = useApp()
@@ -37,16 +37,16 @@ export default function IntegrationsPage() {
     const exp = { version:'2.0', exported: new Date().toISOString(), pipelines, contacts, meta:{total:contacts.length} }
     const a = document.createElement('a')
     a.href = URL.createObjectURL(new Blob([JSON.stringify(exp,null,2)],{type:'application/json'}))
-    a.download = 'nexus-export.json'; a.click()
+    a.download = 'AZOTH-export.json'; a.click()
   }
 
   const connectedCount = Object.values(connected).filter(Boolean).length
   const cats = ['all','automation','comms','billing','crm','tools']
   const filtered = INTEGRATIONS.filter(i=>catFilter==='all'||i.cat===catFilter)
 
-  const sdkCode = `// Nexus JS SDK
-import Nexus from '@nexus/sdk'
-const crm = new Nexus({ apiKey: '${API_KEY}' })
+  const sdkCode = `// AZOTH JS SDK
+import AZOTH from '@AZOTH/sdk'
+const crm = new AZOTH({ apiKey: '${API_KEY}' })
 
 // Contacts
 const list = await crm.contacts.list({ stage: 'Qualified' })
@@ -75,7 +75,7 @@ crm.on('contact.stage_changed', async (e) => {
     }
   }, null, 2)
 
-  const restRef = `# Nexus REST API  —  https://api.nexusplatform.io/v2
+  const restRef = `# AZOTH REST API  —  https://api.azoth.io/v2
 
 GET    /contacts                 List (filters: ?stage=, ?pipeline=, ?q=)
 POST   /contacts                 Create contact

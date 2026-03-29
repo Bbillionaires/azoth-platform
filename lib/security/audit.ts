@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────
-//  Nexus — Audit Log
+//  AZOTH — Audit Log
 //
 //  Every create, update, delete, and login
 //  event is logged with who did it, when,

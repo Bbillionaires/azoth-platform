@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────
-//  Nexus — API Route Auth + Workspace Guard
+//  AZOTH — API Route Auth + Workspace Guard
 //
 //  Every API handler calls requireAuth()
 //  first. This:
@@ -65,7 +65,7 @@ export function withAuth(handler: ApiHandler, options?: { allowedRoles?: AuthCon
 
       return await handler(req, ctx, params)
     } catch (err) {
-      console.error('[Nexus API Error]', err)
+      console.error('[AZOTH API Error]', err)
       return NextResponse.json(
         { error: 'Internal server error', code: 'INTERNAL_ERROR' },
         { status: 500 }
@@ -138,8 +138,8 @@ async function validateApiKey(key: string, ip: string): Promise<AuthContext | nu
   //
   // return { ...data, email: 'api@client', ip }
 
-  // Demo: accept any key starting with 'nx_live_'
-  if (!key.startsWith('nx_live_') && !key.startsWith('nx_test_')) return null
+  // Demo: accept any key starting with 'azoth_live_'
+  if (!key.startsWith('azoth_live_') && !key.startsWith('nx_test_')) return null
 
   return {
     user_id:      'api_client',

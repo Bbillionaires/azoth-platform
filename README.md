@@ -1,4 +1,4 @@
-# Nexus Platform
+# AZOTH Platform
 
 **CRM · Team Inbox · Campaigns · Automations — built to resell**
 
@@ -70,7 +70,7 @@ Each user who signs up at `/auth/signup`:
 ## Project Structure
 
 ```
-nexus/
+AZOTH/
 ├── app/
 │   ├── dashboard/page.tsx        # Home: stats, activity, pipeline overview
 │   ├── inbox/page.tsx            # Basecamp-style team inbox + deal rooms

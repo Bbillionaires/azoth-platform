@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────
-//  Nexus — Field-Level Encryption
+//  AZOTH — Field-Level Encryption
 //
 //  Sensitive contact fields (phone, email)
 //  are encrypted at rest using AES-256-GCM
@@ -26,7 +26,7 @@ async function getKey(): Promise<CryptoKey> {
   if (!rawKey) {
     // In development without a key, skip encryption (log a warning)
     if (process.env.NODE_ENV === 'development') {
-      console.warn('[Nexus Security] FIELD_ENCRYPTION_KEY not set — PII fields stored in plaintext in dev mode')
+      console.warn('[AZOTH Security] FIELD_ENCRYPTION_KEY not set — PII fields stored in plaintext in dev mode')
     }
     throw new Error('FIELD_ENCRYPTION_KEY environment variable is required for encryption')
   }
@@ -102,7 +102,7 @@ export async function decryptField(value: string): Promise<string> {
 
     return dec.decode(plaintext)
   } catch {
-    console.error('[Nexus Security] Decryption failed — returning masked value')
+    console.error('[AZOTH Security] Decryption failed — returning masked value')
     return '[encrypted]'
   }
 }

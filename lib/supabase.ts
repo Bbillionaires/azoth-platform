@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────
-//  Nexus — Supabase Client
+//  AZOTH — Supabase Client
 // ─────────────────────────────────────────
 import { createBrowserClient, createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
