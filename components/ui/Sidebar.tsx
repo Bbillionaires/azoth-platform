@@ -57,7 +57,7 @@ export function Sidebar() {
   }
 
   const createWorkspace = () => {
-    if (!newWsName.trim()) return
+    if (!newWsName.trim()) { alert('Please enter a workspace name'); return }
     const nw = { id: 'ws_' + Math.random().toString(36).slice(2,9), name: newWsName, industry: newWsIndustry, accent: newWsAccent }
     const updated = [...workspaces, nw]
     setWorkspaces(updated)
