@@ -56,8 +56,7 @@ export function Sidebar() {
     setShowWsSwitcher(false)
   }
 
-  const createWorkspace = (e: React.MouseEvent) => {
-    e.stopPropagation()
+  const createWorkspace = () => {
     if (!newWsName.trim()) return
     const nw = { id: 'ws_' + Math.random().toString(36).slice(2,9), name: newWsName, industry: newWsIndustry, accent: newWsAccent }
     const updated = [...workspaces, nw]
@@ -106,7 +105,7 @@ export function Sidebar() {
           ))}
 
           {/* Create new workspace */}
-          <div style={{ borderTop: '1px solid var(--br)', marginTop: 6, paddingTop: 8 }} onClick={e => e.stopPropagation()}>
+          <div style={{ borderTop: '1px solid var(--br)', marginTop: 6, paddingTop: 8 }}>
             <input className="fi" value={newWsName} onChange={e => setNewWsName(e.target.value)}
               placeholder="New workspace name" style={{ fontSize: 11.5, padding: '5px 8px', marginBottom: 6 }} />
             <div style={{ display: 'flex', gap: 6, marginBottom: 6 }}>
