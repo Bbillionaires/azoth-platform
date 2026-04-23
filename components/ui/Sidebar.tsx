@@ -91,7 +91,7 @@ export function Sidebar() {
 
       {/* Workspace dropdown */}
       {showWsSwitcher && (
-        <div style={{ background: 'var(--s2)', borderBottom: '1px solid var(--br)', padding: 8 }}>
+        <div style={{ background: 'var(--s2)', borderBottom: '1px solid var(--br)', padding: 8 }} onClick={e => e.stopPropagation()}>
           {workspaces.map((w: any) => (
             <div key={w.id} onClick={() => switchWorkspace(w.id)}
               style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 9px', borderRadius: 8, cursor: 'pointer', background: w.id === activeWsId ? 'var(--acc-bg)' : 'transparent', marginBottom: 2 }}>
