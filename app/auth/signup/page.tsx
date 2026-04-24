@@ -24,14 +24,26 @@ export default function SignupPage() {
     if (!wsName) { setErr('Workspace name required'); return }
     setLoading(true); setErr('')
     try {
-      // Supabase sign-up + workspace creation — uncomment when connected:
-      // const { createClient } = await import('@/lib/supabase')
-      // const supabase = createClient()
-      // const { data, error } = await supabase.auth.signUp({ email, password: pass, options: { data: { name } } })
-      // if (error) { setErr(error.message); return }
-      // await supabase.from('workspaces').insert({ name: wsName, slug: wsName.toLowerCase().replace(/\s+/g,'-'), owner_id: data.user!.id, industry })
-      // await supabase.from('workspace_members').insert({ workspace_id: wsId, user_id: data.user!.id, name, email, role: 'owner' })
-      await new Promise(r => setTimeout(r, 800))
+      const { createClient } = await import('@/lib/supabase')
+      const supabase = createClient()
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password: pass,
+        options: { data: { name } }
+      })
+      if (error) { setErr(error.message); setLoading(false); return }
+      const userId = data.user!.id
+      const slug = wsName.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')
+      const { data: ws, error: wsErr } = await supabase
+        .from('workspaces')
+        .insert({ name: wsName, slug, owner_id: userId, industry, plan: 'free' })
+        .select()
+        .single()
+      if (wsErr) { setErr(wsErr.message); setLoading(false); return }
+      await supabase.from('workspace_members').insert({
+        workspace_id: ws.id, user_id: userId,
+        email, name, role: 'owner', avatar_color: '#e8a045'
+      })
       router.push('/dashboard')
     } finally { setLoading(false) }
   }

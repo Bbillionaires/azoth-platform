@@ -14,13 +14,10 @@ export default function LoginPage() {
     if (!email || !pass) { setErr('Email and password required'); return }
     setLoading(true); setErr('')
     try {
-      // Supabase auth — uncomment when connected:
-      // const { createClient } = await import('@/lib/supabase')
-      // const supabase = createClient()
-      // const { error } = await supabase.auth.signInWithPassword({ email, password: pass })
-      // if (error) { setErr(error.message); return }
-      // For demo: skip auth and go straight in
-      await new Promise(r => setTimeout(r, 600))
+      const { createClient } = await import('@/lib/supabase')
+      const supabase = createClient()
+      const { error } = await supabase.auth.signInWithPassword({ email, password: pass })
+      if (error) { setErr(error.message); setLoading(false); return }
       router.push('/dashboard')
     } finally { setLoading(false) }
   }
