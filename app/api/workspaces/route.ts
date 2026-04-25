@@ -33,6 +33,25 @@ export async function POST(req: NextRequest) {
       avatar_color: '#e8a045'
     })
 
+    // Create default pipeline for new workspace
+    const { data: pipeline } = await supabase
+      .from('pipelines')
+      .insert({ workspace_id: ws.id, name: 'Sales Pipeline', color: '#e8a045', position: 0 })
+      .select()
+      .single()
+
+    if (pipeline) {
+      // Create default stages
+      await supabase.from('stages').insert([
+        { pipeline_id: pipeline.id, name: 'Lead',        color: '#555e6e', position: 0 },
+        { pipeline_id: pipeline.id, name: 'Qualified',   color: '#5b8ef5', position: 1 },
+        { pipeline_id: pipeline.id, name: 'Proposal',    color: '#e8a045', position: 2 },
+        { pipeline_id: pipeline.id, name: 'Negotiation', color: '#9b72f5', position: 3 },
+        { pipeline_id: pipeline.id, name: 'Won',         color: '#3ecf8e', position: 4 },
+        { pipeline_id: pipeline.id, name: 'Lost',        color: '#f06060', position: 5 },
+      ])
+    }
+
     return NextResponse.json({ workspace: ws }, { status: 201 })
   } catch (err) {
     return NextResponse.json({ error: 'Server error' }, { status: 500 })
