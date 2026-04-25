@@ -26,8 +26,9 @@ body{background:var(--bg);color:var(--t1);font-family:var(--sans);font-size:14px
 input,select,textarea,button{font-family:var(--sans)}
 a{color:inherit;text-decoration:none}
 
-::-webkit-scrollbar{width:3px;height:3px}
-::-webkit-scrollbar-thumb{background:rgba(255,255,255,.09);border-radius:2px}
+::-webkit-scrollbar{width:8px;height:8px}
+::-webkit-scrollbar-thumb{background:rgba(255,255,255,.2);border-radius:4px}
+::-webkit-scrollbar-track{background:rgba(255,255,255,.04);border-radius:4px}
 
 /* ─── Shell ─────────────────────────────── */
 .shell{display:flex;width:100vw;height:100vh;overflow:hidden}
@@ -101,7 +102,7 @@ tr:last-child td{border-bottom:none}
 
 /* ─── Modal ─────────────────────────────── */
 .ov{position:fixed;inset:0;background:rgba(0,0,0,.72);display:flex;align-items:center;justify-content:center;z-index:300;backdrop-filter:blur(4px)}
-.modal{background:var(--s1);border:1px solid var(--brm);border-radius:var(--r16);padding:26px;width:520px;max-height:90vh;overflow-y:auto;box-shadow:0 24px 80px rgba(0,0,0,.65)}
+.modal{background:var(--s1);border:1px solid var(--brm);border-radius:var(--r16);padding:26px;width:520px;max-height:90vh;overflow-y:auto;box-shadow:0 24px 80px rgba(0,0,0,.65);scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.2) rgba(255,255,255,.04)}
 .modal-lg{width:660px}
 .modal-xl{width:800px}
 .modal-title{font-size:17px;font-weight:700;letter-spacing:-.3px;margin-bottom:2px}
