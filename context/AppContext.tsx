@@ -1,13 +1,14 @@
 'use client'
 import React, { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react'
 import type { Contact, Pipeline, CRMField, Automation, Thread, Message, Campaign, Workspace, WorkspaceMember } from '@/lib/types'
-import { DEMO_PIPELINES, DEMO_FIELDS, DEMO_CONTACTS, DEMO_AUTOMATIONS, DEMO_THREADS, DEMO_MESSAGES, DEMO_CAMPAIGNS, DEMO_WORKSPACE_ID, DEMO_USER_ID } from '@/lib/defaults'
-import { ls, uid } from '@/lib/utils'
+import { DEMO_PIPELINES, DEMO_FIELDS } from '@/lib/defaults'
+import { uid } from '@/lib/utils'
+import { createClient } from '@/lib/supabase'
 
 interface AppContextType {
-  workspace: Workspace
+  workspace: Workspace | null
   members: WorkspaceMember[]
-  currentUser: WorkspaceMember
+  currentUser: WorkspaceMember | null
   activeWsId: string
   setActiveWsId: (id: string) => void
   contacts: Contact[]
@@ -17,118 +18,196 @@ interface AppContextType {
   messages: Message[]
   campaigns: Campaign[]
   automations: Automation[]
-  addContact: (c: Omit<Contact,'id'>) => void
-  updateContact: (c: Contact) => void
-  deleteContact: (id: number) => void
-  moveStage: (id: number, stageId: string) => void
+  loading: boolean
+  addContact: (c: Omit<Contact,'id'>) => Promise<void>
+  updateContact: (c: Contact) => Promise<void>
+  deleteContact: (id: number) => Promise<void>
+  moveStage: (id: number, stageId: string) => Promise<void>
   setPipelines: React.Dispatch<React.SetStateAction<Pipeline[]>>
   setFields: React.Dispatch<React.SetStateAction<CRMField[]>>
   setAutomations: React.Dispatch<React.SetStateAction<Automation[]>>
   setCampaigns: React.Dispatch<React.SetStateAction<Campaign[]>>
-  addMessage: (threadId: string, body: string) => void
-  addThread: (t: Omit<Thread,'id'|'created_at'|'last_message_at'>) => Thread
-  setWorkspace: React.Dispatch<React.SetStateAction<Workspace>>
+  addMessage: (threadId: string, body: string) => Promise<void>
+  addThread: (t: Omit<Thread,'id'|'created_at'|'last_message_at'>) => Promise<Thread>
+  setWorkspace: React.Dispatch<React.SetStateAction<Workspace | null>>
+  refetch: () => Promise<void>
 }
 
 const Ctx = createContext<AppContextType | null>(null)
 
-const DEFAULT_WORKSPACE: Workspace = {
-  id: DEMO_WORKSPACE_ID, name: 'My Workspace', slug: 'my-workspace',
-  industry: 'SaaS', currency: 'USD', accent: '#e8a045',
-  plan: 'pro', owner_id: DEMO_USER_ID, created_at: '2026-01-01',
-}
-
-const DEFAULT_MEMBERS: WorkspaceMember[] = [
-  { id: 'wm1', workspace_id: DEMO_WORKSPACE_ID, user_id: DEMO_USER_ID, email: 'dearis@co.com', name: 'DeAris', role: 'owner', avatar_color: '#e8a045', online: true },
-  { id: 'wm2', workspace_id: DEMO_WORKSPACE_ID, user_id: 'user_alex',  email: 'alex@co.com',   name: 'Alex',   role: 'admin', avatar_color: '#5b8ef5', online: true },
-  { id: 'wm3', workspace_id: DEMO_WORKSPACE_ID, user_id: 'user_maria', email: 'maria@co.com',  name: 'Maria',  role: 'member', avatar_color: '#9b72f5', online: false },
-]
-
 export function AppProvider({ children }: { children: ReactNode }) {
-  // Active workspace ID — all data is scoped to this
-  const [activeWsId, setActiveWsIdState] = useState<string>(() =>
-    ls.get('nx_active_ws', 'ws_demo_001')
-  )
+  const supabase = createClient()
 
-  const setActiveWsId = useCallback((id: string) => {
-    ls.set('nx_active_ws', id)
-    setActiveWsIdState(id)
-  }, [])
+  const [loading,     setLoading]     = useState(true)
+  const [activeWsId,  setActiveWsIdState] = useState<string>('')
+  const [workspace,   setWorkspace]   = useState<Workspace | null>(null)
+  const [members,     setMembers]     = useState<WorkspaceMember[]>([])
+  const [contacts,    setContacts]    = useState<Contact[]>([])
+  const [pipelines,   setPipelines]   = useState<Pipeline[]>(DEMO_PIPELINES)
+  const [fields,      setFields]      = useState<CRMField[]>(DEMO_FIELDS)
+  const [automations, setAutomations] = useState<Automation[]>([])
+  const [threads,     setThreads]     = useState<Thread[]>([])
+  const [messages,    setMessages]    = useState<Message[]>([])
+  const [campaigns,   setCampaigns]   = useState<Campaign[]>([])
 
-  const [workspace,   setWorkspace]   = useState<Workspace>(() => ls.get('nx_workspace', DEFAULT_WORKSPACE))
-  const [members]                     = useState<WorkspaceMember[]>(DEFAULT_MEMBERS)
+  // ── Load all data for a workspace ─────────
+  const loadWorkspaceData = useCallback(async (wsId: string) => {
+    if (!wsId) return
+    setLoading(true)
+    try {
+      const [
+        { data: contactsData },
+        { data: pipelinesData },
+        { data: threadsData },
+        { data: campaignsData },
+        { data: automationsData },
+        { data: membersData },
+      ] = await Promise.all([
+        supabase.from('contacts').select('*').eq('workspace_id', wsId).order('created_at', { ascending: false }),
+        supabase.from('pipelines').select('*, stages(*)').eq('workspace_id', wsId),
+        supabase.from('threads').select('*').eq('workspace_id', wsId).order('last_message_at', { ascending: false }),
+        supabase.from('campaigns').select('*').eq('workspace_id', wsId).order('created_at', { ascending: false }),
+        supabase.from('automations').select('*').eq('workspace_id', wsId),
+        supabase.from('workspace_members').select('*').eq('workspace_id', wsId),
+      ])
 
-  // All data keyed by workspace ID so each workspace is fully isolated
-  const [contacts,    setContacts]    = useState<Contact[]>(() =>    ls.get(`nx_contacts_${ls.get('nx_active_ws','ws_demo_001')}`,    []))
-  const [pipelines,   setPipelines]   = useState<Pipeline[]>(() =>   ls.get(`nx_pipelines_${ls.get('nx_active_ws','ws_demo_001')}`,   DEMO_PIPELINES))
-  const [fields,      setFields]      = useState<CRMField[]>(() =>   ls.get(`nx_fields_${ls.get('nx_active_ws','ws_demo_001')}`,      DEMO_FIELDS))
-  const [automations, setAutomations] = useState<Automation[]>(() => ls.get(`nx_automations_${ls.get('nx_active_ws','ws_demo_001')}`, []))
-  const [threads,     setThreads]     = useState<Thread[]>(() =>     ls.get(`nx_threads_${ls.get('nx_active_ws','ws_demo_001')}`,     []))
-  const [messages,    setMessages]    = useState<Message[]>(() =>    ls.get(`nx_messages_${ls.get('nx_active_ws','ws_demo_001')}`,    []))
-  const [campaigns,   setCampaigns]   = useState<Campaign[]>(() =>   ls.get(`nx_campaigns_${ls.get('nx_active_ws','ws_demo_001')}`,   []))
-  // Persist workspace settings
-  useEffect(() => ls.set('nx_workspace', workspace), [workspace])
-
-  // Persist all data scoped to active workspace
-  useEffect(() => ls.set(`nx_contacts_${activeWsId}`,    contacts),    [contacts,    activeWsId])
-  useEffect(() => ls.set(`nx_pipelines_${activeWsId}`,   pipelines),   [pipelines,   activeWsId])
-  useEffect(() => ls.set(`nx_fields_${activeWsId}`,      fields),      [fields,      activeWsId])
-  useEffect(() => ls.set(`nx_automations_${activeWsId}`, automations), [automations, activeWsId])
-  useEffect(() => ls.set(`nx_threads_${activeWsId}`,     threads),     [threads,     activeWsId])
-  useEffect(() => ls.set(`nx_messages_${activeWsId}`,    messages),    [messages,    activeWsId])
-  useEffect(() => ls.set(`nx_campaigns_${activeWsId}`,   campaigns),   [campaigns,   activeWsId])
-
-  // When workspace switches, reload all data for that workspace
-  useEffect(() => {
-    setContacts(   ls.get(`nx_contacts_${activeWsId}`,    []))
-    setAutomations(ls.get(`nx_automations_${activeWsId}`, []))
-    setThreads(    ls.get(`nx_threads_${activeWsId}`,     []))
-    setMessages(   ls.get(`nx_messages_${activeWsId}`,    []))
-    setCampaigns(  ls.get(`nx_campaigns_${activeWsId}`,   []))
-  }, [activeWsId])
-
-  const addContact = useCallback((c: Omit<Contact,'id'>) => {
-    setContacts(p => [...p, { ...c, id: Date.now() }])
-  }, [])
-
-  const updateContact = useCallback((c: Contact) => {
-    setContacts(p => p.map(x => x.id === c.id ? c : x))
-  }, [])
-
-  const deleteContact = useCallback((id: number) => {
-    setContacts(p => p.filter(c => c.id !== id))
-  }, [])
-
-  const moveStage = useCallback((id: number, stageId: string) => {
-    setContacts(p => p.map(c => c.id === id ? { ...c, stage_id: stageId } : c))
-  }, [])
-
-  const addMessage = useCallback((threadId: string, body: string) => {
-    const msg: Message = {
-      id: uid(), thread_id: threadId, workspace_id: activeWsId,
-      author_id: DEMO_USER_ID, author_name: 'DeAris', author_color: '#e8a045',
-      body, mentions: [], reactions: {}, created_at: new Date().toISOString(),
+      if (contactsData)    setContacts(contactsData)
+      if (pipelinesData)   setPipelines(pipelinesData.length > 0 ? pipelinesData : DEMO_PIPELINES)
+      if (threadsData)     setThreads(threadsData)
+      if (campaignsData)   setCampaigns(campaignsData)
+      if (automationsData) setAutomations(automationsData)
+      if (membersData)     setMembers(membersData)
+    } catch (err) {
+      console.error('[AZOTH] Failed to load workspace data:', err)
+    } finally {
+      setLoading(false)
     }
-    setMessages(p => [...p, msg])
-    setThreads(p => p.map(t => t.id === threadId ? { ...t, last_message_at: msg.created_at } : t))
-  }, [activeWsId])
-
-  const addThread = useCallback((t: Omit<Thread,'id'|'created_at'|'last_message_at'>): Thread => {
-    const now = new Date().toISOString()
-    const thread: Thread = { ...t, id: uid(), created_at: now, last_message_at: now }
-    setThreads(p => [thread, ...p])
-    return thread
   }, [])
 
-  const currentUser = members[0]
+  // ── Init — get current user + workspace ───
+  const init = useCallback(async () => {
+    setLoading(true)
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) { setLoading(false); return }
+
+      // Get user's workspace membership
+      const { data: memberRow } = await supabase
+        .from('workspace_members')
+        .select('*, workspaces(*)')
+        .eq('user_id', user.id)
+        .single()
+
+      if (!memberRow) { setLoading(false); return }
+
+      const ws = memberRow.workspaces as unknown as Workspace
+      setWorkspace(ws)
+      setActiveWsIdState(ws.id)
+      await loadWorkspaceData(ws.id)
+    } catch (err) {
+      console.error('[AZOTH] Init error:', err)
+      setLoading(false)
+    }
+  }, [loadWorkspaceData])
+
+  useEffect(() => { init() }, [])
+
+  // ── Switch workspace ──────────────────────
+  const setActiveWsId = useCallback(async (id: string) => {
+    setActiveWsIdState(id)
+    const { data: ws } = await supabase.from('workspaces').select('*').eq('id', id).single()
+    if (ws) setWorkspace(ws)
+    await loadWorkspaceData(id)
+  }, [loadWorkspaceData])
+
+  const refetch = useCallback(() => loadWorkspaceData(activeWsId), [activeWsId, loadWorkspaceData])
+
+  // ── Current user ──────────────────────────
+  const currentUser = members[0] ?? null
+
+  // ── Contact CRUD ──────────────────────────
+  const addContact = useCallback(async (c: Omit<Contact,'id'>) => {
+    const { data, error } = await supabase
+      .from('contacts')
+      .insert({ ...c, workspace_id: activeWsId })
+      .select()
+      .single()
+    if (error) { console.error('[AZOTH] addContact:', error); return }
+    if (data) setContacts(p => [data, ...p])
+  }, [activeWsId])
+
+  const updateContact = useCallback(async (c: Contact) => {
+    const { error } = await supabase
+      .from('contacts')
+      .update(c)
+      .eq('id', c.id)
+      .eq('workspace_id', activeWsId)
+    if (error) { console.error('[AZOTH] updateContact:', error); return }
+    setContacts(p => p.map(x => x.id === c.id ? c : x))
+  }, [activeWsId])
+
+  const deleteContact = useCallback(async (id: number) => {
+    const { error } = await supabase
+      .from('contacts')
+      .delete()
+      .eq('id', id)
+      .eq('workspace_id', activeWsId)
+    if (error) { console.error('[AZOTH] deleteContact:', error); return }
+    setContacts(p => p.filter(c => c.id !== id))
+  }, [activeWsId])
+
+  const moveStage = useCallback(async (id: number, stageId: string) => {
+    const { error } = await supabase
+      .from('contacts')
+      .update({ stage_id: stageId })
+      .eq('id', id)
+      .eq('workspace_id', activeWsId)
+    if (error) { console.error('[AZOTH] moveStage:', error); return }
+    setContacts(p => p.map(c => c.id === id ? { ...c, stage_id: stageId } : c))
+  }, [activeWsId])
+
+  // ── Messages ──────────────────────────────
+  const addMessage = useCallback(async (threadId: string, body: string) => {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+    const member = members.find(m => m.user_id === user.id) ?? members[0]
+    const msg = {
+      thread_id: threadId,
+      workspace_id: activeWsId,
+      author_id: user.id,
+      author_name: member?.name ?? 'User',
+      author_color: member?.avatar_color ?? '#e8a045',
+      body,
+      mentions: [],
+      reactions: {},
+    }
+    const { data, error } = await supabase.from('messages').insert(msg).select().single()
+    if (error) { console.error('[AZOTH] addMessage:', error); return }
+    if (data) {
+      setMessages(p => [...p, data])
+      setThreads(p => p.map(t => t.id === threadId ? { ...t, last_message_at: data.created_at } : t))
+    }
+  }, [activeWsId, members])
+
+  const addThread = useCallback(async (t: Omit<Thread,'id'|'created_at'|'last_message_at'>): Promise<Thread> => {
+    const { data, error } = await supabase
+      .from('threads')
+      .insert({ ...t, workspace_id: activeWsId })
+      .select()
+      .single()
+    if (error) { console.error('[AZOTH] addThread:', error); throw error }
+    setThreads(p => [data, ...p])
+    return data
+  }, [activeWsId])
 
   return (
     <Ctx.Provider value={{
       workspace, members, currentUser, activeWsId, setActiveWsId,
       contacts, pipelines, fields, automations, threads, messages, campaigns,
+      loading,
       addContact, updateContact, deleteContact, moveStage,
       setPipelines, setFields, setAutomations, setCampaigns,
-      addMessage, addThread, setWorkspace,
+      addMessage, addThread, setWorkspace, refetch,
     }}>
       {children}
     </Ctx.Provider>
