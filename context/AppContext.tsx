@@ -127,9 +127,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   // ── Contact CRUD ──────────────────────────
   const addContact = useCallback(async (c: Omit<Contact,'id'>) => {
+    // Remove id if present — Postgres generates it automatically
+    const { id: _removed, ...contactData } = c as any
     const { data, error } = await supabase
       .from('contacts')
-      .insert({ ...c, workspace_id: activeWsId })
+      .insert({ ...contactData, workspace_id: activeWsId })
       .select()
       .single()
     if (error) { console.error('[AZOTH] addContact:', error); return }
