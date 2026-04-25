@@ -39,7 +39,18 @@ export default function SignupPage() {
         .insert({ name: wsName, slug, owner_id: userId, industry, plan: 'free' })
         .select()
         .single()
-      if (wsErr) { setErr(wsErr.message); setLoading(false); return }
+      if (wsErr) {
+        // If RLS blocks it, call our API route which uses service role
+        const res = await fetch('/api/workspaces', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: wsName, slug, owner_id: userId, industry, email, userName: name })
+        })
+        const json = await res.json()
+        if (!res.ok) { setErr(json.error || 'Failed to create workspace'); setLoading(false); return }
+        router.push('/dashboard')
+        return
+      }
       await supabase.from('workspace_members').insert({
         workspace_id: ws.id, user_id: userId,
         email, name, role: 'owner', avatar_color: '#e8a045'
