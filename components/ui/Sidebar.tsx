@@ -184,12 +184,12 @@ export function Sidebar() {
       {/* User row + logout */}
       <div className="aside-ft">
         <div className="usr-row">
-          <div className="av" style={{ width: 30, height: 30, background: currentUser.avatar_color + '22', color: currentUser.avatar_color, fontSize: 11 }}>
-            {initials(currentUser.name)}
+        <div className="av" style={{ width: 30, height: 30, background: (currentUser?.avatar_color ?? '#e8a045') + '22', color: currentUser?.avatar_color ?? '#e8a045', fontSize: 11 }}>
+            {initials(currentUser?.name ?? 'User')}
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 12.5, fontWeight: 600 }}>{currentUser.name}</div>
-            <div style={{ fontSize: 10.5, color: 'var(--t3)', textTransform: 'capitalize' }}>{currentUser.role}</div>
+            <div style={{ fontSize: 12.5, fontWeight: 600 }}>{currentUser?.name ?? 'User'}</div>
+            <div style={{ fontSize: 10.5, color: 'var(--t3)', textTransform: 'capitalize' }}>{currentUser?.role ?? 'member'}</div>
           </div>
           <button
             onClick={() => { window.location.href = '/auth/login' }}
