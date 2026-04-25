@@ -59,14 +59,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [members]                     = useState<WorkspaceMember[]>(DEFAULT_MEMBERS)
 
   // All data keyed by workspace ID so each workspace is fully isolated
-  const [contacts,    setContacts]    = useState<Contact[]>(() =>    ls.get(`nx_contacts_${ls.get('nx_active_ws','ws_demo_001')}`,    DEMO_CONTACTS))
+  const [contacts,    setContacts]    = useState<Contact[]>(() =>    ls.get(`nx_contacts_${ls.get('nx_active_ws','ws_demo_001')}`,    []))
   const [pipelines,   setPipelines]   = useState<Pipeline[]>(() =>   ls.get(`nx_pipelines_${ls.get('nx_active_ws','ws_demo_001')}`,   DEMO_PIPELINES))
   const [fields,      setFields]      = useState<CRMField[]>(() =>   ls.get(`nx_fields_${ls.get('nx_active_ws','ws_demo_001')}`,      DEMO_FIELDS))
-  const [automations, setAutomations] = useState<Automation[]>(() => ls.get(`nx_automations_${ls.get('nx_active_ws','ws_demo_001')}`, DEMO_AUTOMATIONS))
-  const [threads,     setThreads]     = useState<Thread[]>(() =>     ls.get(`nx_threads_${ls.get('nx_active_ws','ws_demo_001')}`,     DEMO_THREADS))
-  const [messages,    setMessages]    = useState<Message[]>(() =>    ls.get(`nx_messages_${ls.get('nx_active_ws','ws_demo_001')}`,    DEMO_MESSAGES))
-  const [campaigns,   setCampaigns]   = useState<Campaign[]>(() =>   ls.get(`nx_campaigns_${ls.get('nx_active_ws','ws_demo_001')}`,   DEMO_CAMPAIGNS))
-
+  const [automations, setAutomations] = useState<Automation[]>(() => ls.get(`nx_automations_${ls.get('nx_active_ws','ws_demo_001')}`, []))
+  const [threads,     setThreads]     = useState<Thread[]>(() =>     ls.get(`nx_threads_${ls.get('nx_active_ws','ws_demo_001')}`,     []))
+  const [messages,    setMessages]    = useState<Message[]>(() =>    ls.get(`nx_messages_${ls.get('nx_active_ws','ws_demo_001')}`,    []))
+  const [campaigns,   setCampaigns]   = useState<Campaign[]>(() =>   ls.get(`nx_campaigns_${ls.get('nx_active_ws','ws_demo_001')}`,   []))
   // Persist workspace settings
   useEffect(() => ls.set('nx_workspace', workspace), [workspace])
 
@@ -81,13 +80,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   // When workspace switches, reload all data for that workspace
   useEffect(() => {
-    setContacts(   ls.get(`nx_contacts_${activeWsId}`,    activeWsId === 'ws_demo_001' ? DEMO_CONTACTS    : []))
-    setPipelines(  ls.get(`nx_pipelines_${activeWsId}`,   activeWsId === 'ws_demo_001' ? DEMO_PIPELINES   : DEMO_PIPELINES))
-    setFields(     ls.get(`nx_fields_${activeWsId}`,      DEMO_FIELDS))
-    setAutomations(ls.get(`nx_automations_${activeWsId}`, activeWsId === 'ws_demo_001' ? DEMO_AUTOMATIONS : []))
-    setThreads(    ls.get(`nx_threads_${activeWsId}`,     activeWsId === 'ws_demo_001' ? DEMO_THREADS     : []))
-    setMessages(   ls.get(`nx_messages_${activeWsId}`,    activeWsId === 'ws_demo_001' ? DEMO_MESSAGES    : []))
-    setCampaigns(  ls.get(`nx_campaigns_${activeWsId}`,   activeWsId === 'ws_demo_001' ? DEMO_CAMPAIGNS   : []))
+    setContacts(   ls.get(`nx_contacts_${activeWsId}`,    []))
+    setAutomations(ls.get(`nx_automations_${activeWsId}`, []))
+    setThreads(    ls.get(`nx_threads_${activeWsId}`,     []))
+    setMessages(   ls.get(`nx_messages_${activeWsId}`,    []))
+    setCampaigns(  ls.get(`nx_campaigns_${activeWsId}`,   []))
   }, [activeWsId])
 
   const addContact = useCallback((c: Omit<Contact,'id'>) => {
