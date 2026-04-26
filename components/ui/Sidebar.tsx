@@ -201,7 +201,11 @@ export function Sidebar() {
                 style={{ width: 34, height: 34, border: 'none', borderRadius: 6, cursor: 'pointer', padding: 2, background: 'var(--s3)' }}
               />
             </div>
-            onClick={(e) => { e.stopPropagation(); createWorkspace(e); }}
+            <button
+              className="btn btn-acc"
+              style={{ width: '100%', justifyContent: 'center', fontSize: 12, padding: 6 }}
+              disabled={creating}
+              onClick={(e) => { e.stopPropagation(); createWorkspace(e) }}
             >
               {creating ? 'Creating...' : '+ Create Workspace'}
             </button>
