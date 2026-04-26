@@ -54,6 +54,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const loadWorkspaceData = useCallback(async (wsId: string) => {
     if (!wsId) return
     setLoading(true)
+    // Clear all data first so old workspace data doesn't bleed through
+    setContacts([])
+    setPipelines([])
+    setThreads([])
+    setCampaigns([])
+    setAutomations([])
+    setMembers([])
     try {
       const [
         { data: contactsData },
