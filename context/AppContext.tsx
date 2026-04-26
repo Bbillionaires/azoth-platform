@@ -71,7 +71,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
         { data: membersData },
       ] = await Promise.all([
         supabase.from('contacts').select('*').eq('workspace_id', wsId).order('created_at', { ascending: false }),
-        supabase.from('pipelines').select('*, stages(*)').eq('workspace_id', wsId),
+        supabase.from('pipelines').select('*, stages(*)')
+          .eq('workspace_id', wsId)
+          .order('position', { ascending: true }),
         supabase.from('threads').select('*').eq('workspace_id', wsId).order('last_message_at', { ascending: false }),
         supabase.from('campaigns').select('*').eq('workspace_id', wsId).order('created_at', { ascending: false }),
         supabase.from('automations').select('*').eq('workspace_id', wsId),

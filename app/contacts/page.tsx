@@ -30,6 +30,7 @@ function ContactModal({ contact, onSave, onClose }: { contact?: Contact | null; 
 
   const save = () => {
     if (!f.name || !f.email) return
+    if (!f.pipeline_id || !f.stage_id) { alert('Please select a pipeline and stage'); return }
     const tags = tagsStr.split(',').map(t => t.trim()).filter(Boolean)
     // Strip id entirely — let Supabase generate it
     const { id: _ignored, ...rest } = f as any
@@ -58,15 +59,32 @@ function ContactModal({ contact, onSave, onClose }: { contact?: Contact | null; 
           <div className="field"><label className="fl">Deal Value ($)</label><input className="fi" type="number" value={f.value} onChange={e=>set('value',e.target.value)} placeholder="50000"/></div>
           <div className="field">
             <label className="fl">Pipeline</label>
-            <select className="fs" value={f.pipeline_id} onChange={e=>{set('pipeline_id',e.target.value);set('stage_id',pipelines.find(p=>p.id===e.target.value)?.stages[0]?.id??'')}}>
-              {pipelines.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}
-            </select>
+            {pipelines.length > 0 ? (
+              <select className="fs" value={f.pipeline_id} onChange={e=>{
+                set('pipeline_id', e.target.value)
+                set('stage_id', pipelines.find(p=>p.id===e.target.value)?.stages?.[0]?.id ?? '')
+              }}>
+                <option value="">— Select Pipeline —</option>
+                {pipelines.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}
+              </select>
+            ) : (
+              <div style={{padding:'8px 11px',background:'var(--s3)',border:'1px solid var(--br)',borderRadius:'var(--r8)',fontSize:12,color:'var(--t3)'}}>
+                No pipelines yet — go to Settings to create one
+              </div>
+            )}
           </div>
           <div className="field">
             <label className="fl">Stage</label>
-            <select className="fs" value={f.stage_id} onChange={e=>set('stage_id',e.target.value)}>
-              {(selPl?.stages??[]).map(s=><option key={s.id} value={s.id}>{s.name}</option>)}
-            </select>
+            {(selPl?.stages ?? []).length > 0 ? (
+              <select className="fs" value={f.stage_id} onChange={e=>set('stage_id',e.target.value)}>
+                <option value="">— Select Stage —</option>
+                {(selPl?.stages ?? []).map(s=><option key={s.id} value={s.id}>{s.name}</option>)}
+              </select>
+            ) : (
+              <div style={{padding:'8px 11px',background:'var(--s3)',border:'1px solid var(--br)',borderRadius:'var(--r8)',fontSize:12,color:'var(--t3)'}}>
+                {pipelines.length > 0 ? 'Select a pipeline first' : 'No stages available'}
+              </div>
+            )}
           </div>
           <div className="field">
             <label className="fl">Source</label>
