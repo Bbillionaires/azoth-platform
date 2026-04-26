@@ -202,6 +202,7 @@ export function Sidebar() {
               />
             </div>
             onClick={(e) => { e.stopPropagation(); createWorkspace(e); }}
+            >
               {creating ? 'Creating...' : '+ Create Workspace'}
             </button>
           </div>
