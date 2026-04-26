@@ -2,7 +2,26 @@ import { NextRequest, NextResponse } from 'next/server'
 
 export async function POST(req: NextRequest) {
   const body = await req.json()
-  const { name, slug, owner_id, industry, email, userName } = body
+  const { name, slug, industry, accent, email, userName } = body
+
+  // Get current user from session
+  const { createClient: createBrowserClient } = await import('@supabase/supabase-js')
+  const authClient = createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+
+  // Get user from auth header
+  const authHeader = req.headers.get('authorization')
+  const token = authHeader?.replace('Bearer ', '')
+  let owner_id = ''
+
+  if (token) {
+    const { data: { user } } = await authClient.auth.getUser(token)
+    owner_id = user?.id ?? ''
+  }
+
+  if (!owner_id) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
 
   if (!name || !owner_id) {
     return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
