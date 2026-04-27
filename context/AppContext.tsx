@@ -101,13 +101,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (!user) { setLoading(false); return }
 
       // Get user's workspace membership
-      const { data: memberRow } = await supabase
+      const { data: memberRows } = await supabase
         .from('workspace_members')
         .select('*, workspaces(*)')
         .eq('user_id', user.id)
-        .single()
 
-      if (!memberRow) { setLoading(false); return }
+      const memberRow = memberRows?.[0]
+
+      if (!memberRow || !memberRows) { setLoading(false); return }
 
       const ws = memberRow.workspaces as unknown as Workspace
       setWorkspace(ws)
