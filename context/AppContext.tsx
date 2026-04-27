@@ -1,7 +1,7 @@
 'use client'
 import React, { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react'
 import type { Contact, Pipeline, CRMField, Automation, Thread, Message, Campaign, Workspace, WorkspaceMember } from '@/lib/types'
-import { DEMO_PIPELINES, DEMO_FIELDS } from '@/lib/defaults'
+import { DEMO_FIELDS } from '@/lib/defaults'
 import { uid } from '@/lib/utils'
 import { createClient } from '@/lib/supabase'
 
@@ -54,13 +54,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const loadWorkspaceData = useCallback(async (wsId: string) => {
     if (!wsId) return
     setLoading(true)
-    // Clear all data first so old workspace data doesn't bleed through
+    // Clear first to prevent bleed
     setContacts([])
     setPipelines([])
     setThreads([])
     setCampaigns([])
     setAutomations([])
     setMembers([])
+
     try {
       const [
         { data: contactsData },
@@ -71,9 +72,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         { data: membersData },
       ] = await Promise.all([
         supabase.from('contacts').select('*').eq('workspace_id', wsId).order('created_at', { ascending: false }),
-        supabase.from('pipelines').select('*, stages(*)')
-          .eq('workspace_id', wsId)
-          .order('position', { ascending: true }),
+        supabase.from('pipelines').select('*, stages(*)').eq('workspace_id', wsId).order('position', { ascending: true }),
         supabase.from('threads').select('*').eq('workspace_id', wsId).order('last_message_at', { ascending: false }),
         supabase.from('campaigns').select('*').eq('workspace_id', wsId).order('created_at', { ascending: false }),
         supabase.from('automations').select('*').eq('workspace_id', wsId),
@@ -81,41 +80,39 @@ export function AppProvider({ children }: { children: ReactNode }) {
       ])
 
       if (contactsData)    setContacts(contactsData)
-      if (pipelinesData)   setPipelines(pipelinesData.length > 0 ? pipelinesData : [])
+      if (pipelinesData)   setPipelines(pipelinesData)
       if (threadsData)     setThreads(threadsData)
       if (campaignsData)   setCampaigns(campaignsData)
       if (automationsData) setAutomations(automationsData)
       if (membersData)     setMembers(membersData)
     } catch (err) {
-      console.error('[AZOTH] Failed to load workspace data:', err)
+      console.error('[AZOTH] loadWorkspaceData:', err)
     } finally {
       setLoading(false)
     }
   }, [])
 
-  // ── Init — get current user + workspace ───
+  // ── Init ──────────────────────────────────
   const init = useCallback(async () => {
     setLoading(true)
     try {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { setLoading(false); return }
 
-      // Get user's workspace membership
       const { data: memberRows } = await supabase
         .from('workspace_members')
         .select('*, workspaces(*)')
         .eq('user_id', user.id)
 
       const memberRow = memberRows?.[0]
-
-      if (!memberRow || !memberRows) { setLoading(false); return }
+      if (!memberRow) { setLoading(false); return }
 
       const ws = memberRow.workspaces as unknown as Workspace
       setWorkspace(ws)
       setActiveWsIdState(ws.id)
       await loadWorkspaceData(ws.id)
     } catch (err) {
-      console.error('[AZOTH] Init error:', err)
+      console.error('[AZOTH] init:', err)
       setLoading(false)
     }
   }, [loadWorkspaceData])
@@ -123,22 +120,22 @@ export function AppProvider({ children }: { children: ReactNode }) {
   useEffect(() => { init() }, [])
 
   // ── Switch workspace ──────────────────────
-  const setActiveWsId = useCallback(async (id: string) => {
+  const setActiveWsId = useCallback((id: string) => {
+    // Just update the ID and load data — no async in the setter
     setActiveWsIdState(id)
-    const { data: ws } = await supabase.from('workspaces').select('*').eq('id', id).single()
-    if (ws) setWorkspace(ws)
-    await loadWorkspaceData(id)
+    supabase.from('workspaces').select('*').eq('id', id).single().then(({ data: ws }) => {
+      if (ws) setWorkspace(ws)
+    })
+    loadWorkspaceData(id)
   }, [loadWorkspaceData])
 
   const refetch = useCallback(() => loadWorkspaceData(activeWsId), [activeWsId, loadWorkspaceData])
 
-  // ── Current user ──────────────────────────
   const currentUser = members[0] ?? null
 
   // ── Contact CRUD ──────────────────────────
   const addContact = useCallback(async (c: Omit<Contact,'id'>) => {
-    // Remove id if present — Postgres generates it automatically
-    const { id: _removed, ...contactData } = c as any
+    const { id: _ignored, ...contactData } = c as any
     const { data, error } = await supabase
       .from('contacts')
       .insert({ ...contactData, workspace_id: activeWsId })
