@@ -70,8 +70,8 @@ export function Sidebar() {
   }
 
   const switchWorkspace = async (id: string) => {
-    await setActiveWsId(id)
     setShowWsSwitcher(false)
+    await setActiveWsId(id)
   }
 
   const createWorkspace = async (e: React.MouseEvent) => {
