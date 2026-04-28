@@ -201,14 +201,14 @@ export function Sidebar() {
                 style={{ width: 34, height: 34, border: 'none', borderRadius: 6, cursor: 'pointer', padding: 2, background: 'var(--s3)' }}
               />
             </div>
-        <button 
-          className="btn btn-acc btn-sm" 
-          onClick={()=>setModal(true)}
-          disabled={pipelines.length === 0}
-          title={pipelines.length === 0 ? 'Loading pipelines...' : 'Add new contact'}
-        >
-          <span style={{fontSize:15}}>+</span> {pipelines.length === 0 ? 'Loading...' : 'New Contact'}
-        </button>
+            <button
+              className="btn btn-acc btn-sm"
+              onClick={createWorkspace}
+              disabled={creating || !newWsName.trim()}
+              style={{ width: '100%', fontSize: 11.5 }}
+            >
+              {creating ? 'Creating...' : '+ Create Workspace'}
+            </button>
           </div>
         </div>
       )}
