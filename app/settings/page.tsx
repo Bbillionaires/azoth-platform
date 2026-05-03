@@ -286,7 +286,7 @@ function WorkspaceSettings() {
 
 // ── Team ──────────────────────────────────
 function TeamSettings() {
-  const { members, workspace, currentUser } = useApp()
+  const { members, workspace, activeWsId, currentUser } = useApp()
   const [inviteEmail, setInviteEmail] = useState('')
   const [inviteRole, setInviteRole] = useState('member')
   const [inviting, setInviting] = useState(false)
@@ -301,8 +301,8 @@ function TeamSettings() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          workspace_id: workspace?.id,
-          workspace_name: workspace?.name,
+          workspace_id: activeWsId,
+          workspace_name: workspace?.name ?? 'your workspace',
           email: inviteEmail.trim(),
           role: inviteRole,
           invited_by: currentUser?.user_id,
