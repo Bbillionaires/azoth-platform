@@ -286,14 +286,52 @@ function WorkspaceSettings() {
 
 // ── Team ──────────────────────────────────
 function TeamSettings() {
-  const { members } = useApp()
+  const { members, workspace, currentUser } = useApp()
+  const [inviteEmail, setInviteEmail] = useState('')
+  const [inviteRole, setInviteRole] = useState('member')
+  const [inviting, setInviting] = useState(false)
+  const [inviteMsg, setInviteMsg] = useState('')
+  console.log('[TeamSettings] render', { workspace: workspace?.id, currentUser })
+  const sendInvite = async () => {
+    if (!inviteEmail.trim()) return
+    setInviting(true)
+    setInviteMsg('')
+    try {
+      const res = await fetch('/api/invites', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          workspace_id: workspace?.id,
+          workspace_name: workspace?.name,
+          email: inviteEmail.trim(),
+          role: inviteRole,
+          invited_by: currentUser?.user_id,
+          inviter_name: currentUser?.name,
+        }),
+      })
+      const json = await res.json()
+      if (res.ok) {
+        setInviteMsg('✓ Invite sent')
+        setInviteEmail('')
+      } else {
+        setInviteMsg(json.error || 'Failed to send invite')
+      }
+    } catch {
+      setInviteMsg('Something went wrong')
+    } finally {
+      setInviting(false)
+    }
+  }
+
   return (
     <div>
       <div className="row mb" style={{ marginBottom: 13 }}>
         <span className="sh">Team Members</span>
-        <button className="btn btn-acc btn-sm" style={{ marginLeft: 'auto' }}>+ Invite Member</button>
       </div>
       <div className="card mb">
+        {members.length === 0 && (
+          <div style={{ color: 'var(--t3)', fontSize: 13, padding: '12px 0' }}>No team members yet.</div>
+        )}
         {members.map(m => (
           <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 0', borderBottom: '1px solid rgba(255,255,255,.04)' }}>
             <div className="av" style={{ width: 34, height: 34, background: m.avatar_color + '22', color: m.avatar_color, fontSize: 12 }}>
@@ -309,18 +347,44 @@ function TeamSettings() {
           </div>
         ))}
       </div>
+
       <div className="card card-sm" style={{ background: 'var(--s1)', border: '1px dashed rgba(255,255,255,.1)' }}>
         <div className="sh" style={{ fontSize: 13, marginBottom: 10 }}>Invite New Member</div>
         <div className="fg2" style={{ gap: 10 }}>
-          <div className="field"><label className="fl">Email Address</label><input className="fi" placeholder="teammate@company.com" /></div>
+          <div className="field">
+            <label className="fl">Email Address</label>
+            <input
+              className="fi"
+              value={inviteEmail}
+              onChange={e => setInviteEmail(e.target.value)}
+              placeholder="teammate@company.com"
+              type="email"
+            />
+          </div>
           <div className="field">
             <label className="fl">Role</label>
-            <select className="fs">
-              <option>member</option><option>admin</option><option>viewer</option>
+            <select className="fs" value={inviteRole} onChange={e => setInviteRole(e.target.value)}>
+              <option value="member">Member</option>
+              <option value="admin">Admin</option>
+              <option value="viewer">Viewer</option>
             </select>
           </div>
         </div>
-        <button className="btn btn-acc mt">Send Invite</button>
+        {inviteMsg && (
+          <div style={{ fontSize: 12, marginTop: 10, color: inviteMsg.startsWith('✓') ? 'var(--green)' : 'var(--red)' }}>
+            {inviteMsg}
+          </div>
+        )}
+        <button
+          className="btn btn-acc mt"
+          onClick={() => {
+            console.log('clicked', inviteEmail, workspace?.id, currentUser)
+            sendInvite()
+          }}
+          disabled={inviting || !inviteEmail.trim()}
+        >
+          {inviting ? 'Sending...' : 'Send Invite'}
+        </button>
       </div>
     </div>
   )
