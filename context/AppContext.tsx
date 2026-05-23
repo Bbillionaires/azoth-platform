@@ -99,17 +99,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { setLoading(false); return }
 
-      const { data: memberRows } = await supabase
-        .from('workspace_members')
-        .select('*, workspaces(*)')
-        .eq('user_id', user.id)
+      // Use service-role API route to bypass RLS on workspace_members
+      const res = await fetch(`/api/workspace/me?user_id=${user.id}`)
+      const json = await res.json()
 
-      const memberRow = memberRows?.[0]
-      if (!memberRow) { setLoading(false); return }
+      if (!json.workspace) { setLoading(false); return }
 
-      const ws = memberRow.workspaces as unknown as Workspace
+      const ws = json.workspace as Workspace
       setWorkspace(ws)
       setActiveWsIdState(ws.id)
+      if (json.pipelines?.length) setPipelines(json.pipelines)
       await loadWorkspaceData(ws.id)
     } catch (err) {
       console.error('[AZOTH] init:', err)
