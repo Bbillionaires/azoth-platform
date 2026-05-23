@@ -116,7 +116,22 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   }, [loadWorkspaceData])
 
-  useEffect(() => { init() }, [])
+  useEffect(() => {
+    // Run init on mount
+    init()
+
+    // Re-run whenever auth state changes (login / logout)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'SIGNED_IN') init()
+      if (event === 'SIGNED_OUT') {
+        setWorkspace(null)
+        setContacts([])
+        setPipelines([])
+        setActiveWsIdState('')
+      }
+    })
+    return () => subscription.unsubscribe()
+  }, [])
 
   // ── Switch workspace ──────────────────────
   const setActiveWsId = useCallback((id: string) => {
