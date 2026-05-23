@@ -62,7 +62,7 @@ export default function SignupPage() {
   return (
     <div className="auth-shell">
       <div className="auth-card">
-        <div className="auth-logo"><span style={{ color: 'var(--acc)' }}>N</span>exus</div>
+        <div className="auth-logo"><span style={{ color: 'var(--acc)' }}>A</span>zoth</div>
 
         {/* Step indicator */}
         <div style={{ display: 'flex', gap: 8, marginBottom: 24, justifyContent: 'center' }}>
