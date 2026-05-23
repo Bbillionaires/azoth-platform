@@ -167,3 +167,48 @@ export interface Task {
   created_by: string
   created_at: string
 }
+
+// ── Affiliates ────────────────────────────
+export interface Affiliate {
+  id: string
+  workspace_id: string
+  name: string
+  email: string
+  code: string
+  destination_url: string
+  status: 'active' | 'paused' | 'suspended'
+  commission_rate: number
+  total_clicks: number
+  total_leads: number
+  created_at: string
+}
+
+export interface AffiliateClick {
+  id: string
+  affiliate_id: string
+  referrer: string | null
+  ip: string | null
+  created_at: string
+}
+
+export interface AffiliateLead {
+  id: string
+  affiliate_id: string
+  workspace_id: string
+  contact_name: string
+  contact_email: string
+  source_project: string
+  metadata: Record<string, unknown>
+  created_at: string
+}
+
+export interface AffiliateMaterial {
+  id: string
+  workspace_id: string
+  title: string
+  description: string | null
+  file_url: string
+  file_type: 'image' | 'video' | 'document' | 'link'
+  thumbnail_url: string | null
+  created_at: string
+}
