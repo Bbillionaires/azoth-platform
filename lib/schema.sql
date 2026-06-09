@@ -265,6 +265,30 @@ returns boolean language sql security definer as $$
   );
 $$;
 
+-- Drop existing policies so this file can be re-run safely
+drop policy if exists "Members can view their workspace" on workspaces;
+drop policy if exists "Owners can update their workspace" on workspaces;
+drop policy if exists "Members can view workspace members" on workspace_members;
+drop policy if exists "Admins can manage workspace members" on workspace_members;
+drop policy if exists "Members can view pipelines" on pipelines;
+drop policy if exists "Admins can manage pipelines" on pipelines;
+drop policy if exists "Members can view stages" on stages;
+drop policy if exists "Admins can manage stages" on stages;
+drop policy if exists "Members can view field definitions" on field_definitions;
+drop policy if exists "Admins can manage field definitions" on field_definitions;
+drop policy if exists "Members can access workspace data" on contacts;
+drop policy if exists "Members can access contacts" on contacts;
+drop policy if exists "Members can access threads" on threads;
+drop policy if exists "Members can access messages" on messages;
+drop policy if exists "Members can access campaigns" on campaigns;
+drop policy if exists "Members can access sequence steps" on sequence_steps;
+drop policy if exists "Members can access automations" on automations;
+drop policy if exists "Members can access tasks" on tasks;
+drop policy if exists "Members can view activity log" on activity_log;
+drop policy if exists "Admins can manage api keys" on api_keys;
+drop policy if exists "Admins can manage invites" on workspace_invites;
+drop policy if exists "Invitees can read their invite" on workspace_invites;
+
 -- Workspaces
 create policy "Members can view their workspace" on workspaces
   for select using (is_workspace_member(id));
