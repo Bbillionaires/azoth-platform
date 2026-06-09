@@ -25,7 +25,8 @@ export function Sidebar() {
 
   const [showWsSwitcher, setShowWsSwitcher] = useState(false)
   const [allWorkspaces, setAllWorkspaces] = useState<Workspace[]>([])
-  const [theme, setThemeState] = useState('dark')
+  const [theme, setThemeState] = useState('light')
+  const [bg, setBgState] = useState('default')
   const [newWsName, setNewWsName] = useState('')
   const [newWsIndustry, setNewWsIndustry] = useState('SaaS')
   const [newWsAccent, setNewWsAccent] = useState('#e8a045')
@@ -33,9 +34,12 @@ export function Sidebar() {
 
   useEffect(() => {
     try {
-      const t = localStorage.getItem('azoth_theme') || 'dark'
+      const t = localStorage.getItem('azoth_theme') || 'light'
+      const b = localStorage.getItem('azoth_bg') || 'default'
       setThemeState(t)
+      setBgState(b)
       document.documentElement.setAttribute('data-theme', t)
+      if (b !== 'default') document.documentElement.setAttribute('data-bg', b)
     } catch {}
   }, [])
 
@@ -69,6 +73,23 @@ export function Sidebar() {
     setThemeState(t)
     localStorage.setItem('azoth_theme', t)
     document.documentElement.setAttribute('data-theme', t)
+    // background presets only apply in light mode
+    if (t === 'dark') {
+      document.documentElement.removeAttribute('data-bg')
+    } else {
+      const b = localStorage.getItem('azoth_bg') || 'default'
+      if (b !== 'default') document.documentElement.setAttribute('data-bg', b)
+    }
+  }
+
+  const switchBg = (b: string) => {
+    setBgState(b)
+    localStorage.setItem('azoth_bg', b)
+    if (b === 'default') {
+      document.documentElement.removeAttribute('data-bg')
+    } else {
+      document.documentElement.setAttribute('data-bg', b)
+    }
   }
 
   const switchWorkspace = async (id: string) => {
@@ -259,21 +280,51 @@ export function Sidebar() {
         ))}
       </nav>
 
-      {/* Theme toggle */}
-      <div style={{ padding: '8px 12px', borderTop: '1px solid var(--br)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <span style={{ fontSize: 12, color: 'var(--t3)' }}>Theme</span>
-        <div style={{ display: 'flex', gap: 4 }}>
-          {(['dark', 'light'] as const).map(t => (
-            <button
-              key={t}
-              onClick={() => switchTheme(t)}
-              className="btn btn-ghost btn-xs"
-              style={{ fontSize: 11, padding: '3px 8px', background: theme === t ? 'var(--acc-bg)' : '', color: theme === t ? 'var(--acc)' : 'var(--t3)', borderColor: theme === t ? 'var(--acc-br)' : 'var(--br)' }}
-            >
-              {t === 'dark' ? '🌙' : '☀️'}
-            </button>
-          ))}
+      {/* Theme + Background */}
+      <div style={{ padding: '10px 12px', borderTop: '1px solid var(--br)', display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <span style={{ fontSize: 11, color: 'var(--t3)', fontWeight: 600, letterSpacing: '.4px', textTransform: 'uppercase' }}>Theme</span>
+          <div style={{ display: 'flex', gap: 4 }}>
+            {(['light', 'dark'] as const).map(t => (
+              <button
+                key={t}
+                onClick={() => switchTheme(t)}
+                className="btn btn-ghost btn-xs"
+                style={{ fontSize: 11, padding: '3px 8px', background: theme === t ? 'var(--acc-bg)' : '', color: theme === t ? 'var(--acc)' : 'var(--t3)', borderColor: theme === t ? 'var(--acc-br)' : 'var(--br)' }}
+              >
+                {t === 'light' ? '☀️ Light' : '🌙 Dark'}
+              </button>
+            ))}
+          </div>
         </div>
+        {theme === 'light' && (
+          <div>
+            <div style={{ fontSize: 11, color: 'var(--t3)', fontWeight: 600, letterSpacing: '.4px', textTransform: 'uppercase', marginBottom: 5 }}>Background</div>
+            <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
+              {([
+                { id: 'default', color: '#f4f5f7', label: 'Gray'  },
+                { id: 'white',   color: '#ffffff',  label: 'White' },
+                { id: 'cream',   color: '#fdf8f0',  label: 'Cream' },
+                { id: 'slate',   color: '#f1f5f9',  label: 'Slate' },
+                { id: 'sky',     color: '#f0f7ff',  label: 'Sky'   },
+                { id: 'sand',    color: '#faf7f2',  label: 'Sand'  },
+                { id: 'rose',    color: '#fdf2f4',  label: 'Rose'  },
+              ]).map(({ id, color, label }) => (
+                <button
+                  key={id}
+                  onClick={() => switchBg(id)}
+                  title={label}
+                  style={{
+                    width: 22, height: 22, borderRadius: 6, background: color, cursor: 'pointer',
+                    border: bg === id ? '2px solid var(--acc)' : '1px solid var(--brm)',
+                    boxShadow: bg === id ? '0 0 0 2px var(--acc-bg)' : 'none',
+                    transition: 'all .12s', padding: 0,
+                  }}
+                />
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* User + logout */}
@@ -292,11 +343,11 @@ export function Sidebar() {
           <button
             onClick={logout}
             title="Sign out"
-            style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 16, color: 'var(--t3)', padding: '4px 6px', borderRadius: 6, lineHeight: 1 }}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 11.5, color: 'var(--t3)', padding: '4px 8px', borderRadius: 6, lineHeight: 1, display: 'flex', alignItems: 'center', gap: 4, fontFamily: 'inherit' }}
             onMouseEnter={e => (e.currentTarget.style.color = 'var(--red)')}
             onMouseLeave={e => (e.currentTarget.style.color = 'var(--t3)')}
           >
-            ⏻
+            ⏻ Log out
           </button>
         </div>
       </div>

@@ -34,27 +34,14 @@ export default function SignupPage() {
       if (error) { setErr(error.message); setLoading(false); return }
       const userId = data.user!.id
       const slug = wsName.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')
-      const { data: ws, error: wsErr } = await supabase
-        .from('workspaces')
-        .insert({ name: wsName, slug, owner_id: userId, industry, plan: 'free' })
-        .select()
-        .single()
-      if (wsErr) {
-        // If RLS blocks it, call our API route which uses service role
-        const res = await fetch('/api/workspaces', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name: wsName, slug, owner_id: userId, industry, email, userName: name })
-        })
-        const json = await res.json()
-        if (!res.ok) { setErr(json.error || 'Failed to create workspace'); setLoading(false); return }
-        router.push('/dashboard')
-        return
-      }
-      await supabase.from('workspace_members').insert({
-        workspace_id: ws.id, user_id: userId,
-        email, name, role: 'owner', avatar_color: '#e8a045'
+      // Always use the API route — it has service role access and handles members + pipeline setup
+      const res = await fetch('/api/workspaces', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: wsName, slug, owner_id: userId, industry, email, userName: name })
       })
+      const json = await res.json()
+      if (!res.ok) { setErr(json.error || 'Failed to create workspace'); setLoading(false); return }
       router.push('/dashboard')
     } finally { setLoading(false) }
   }

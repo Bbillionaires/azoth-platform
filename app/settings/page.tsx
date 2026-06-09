@@ -291,7 +291,6 @@ function TeamSettings() {
   const [inviteRole, setInviteRole] = useState('member')
   const [inviting, setInviting] = useState(false)
   const [inviteMsg, setInviteMsg] = useState('')
-  console.log('[TeamSettings] render', { workspace: workspace?.id, currentUser })
   const sendInvite = async () => {
     if (!inviteEmail.trim()) return
     setInviting(true)
@@ -377,10 +376,7 @@ function TeamSettings() {
         )}
         <button
           className="btn btn-acc mt"
-          onClick={() => {
-            console.log('clicked', inviteEmail, workspace?.id, currentUser)
-            sendInvite()
-          }}
+          onClick={sendInvite}
           disabled={inviting || !inviteEmail.trim()}
         >
           {inviting ? 'Sending...' : 'Send Invite'}

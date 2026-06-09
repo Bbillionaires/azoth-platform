@@ -9,10 +9,10 @@ export async function GET(req: NextRequest) {
   const script = `
 (function() {
   var AZOTH_CONFIG = {
-    apiKey: '${apiKey}',
-    workspaceId: '${workspaceId}',
-    color: '${color}',
-    source: '${source}',
+    apiKey: ${JSON.stringify(apiKey)},
+    workspaceId: ${JSON.stringify(workspaceId)},
+    color: ${JSON.stringify(color)},
+    source: ${JSON.stringify(source)},
     endpoint: 'https://azoth-platform.vercel.app/api/contacts'
   };
 
