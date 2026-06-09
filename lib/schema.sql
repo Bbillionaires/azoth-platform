@@ -197,18 +197,54 @@ create table if not exists activity_log (
 create index on activity_log(workspace_id);
 create index on activity_log(contact_id);
 
+-- ── API Keys ──────────────────────────────
+create table if not exists api_keys (
+  id           uuid primary key default gen_random_uuid(),
+  workspace_id uuid references workspaces(id) on delete cascade,
+  user_id      uuid not null,
+  email        text not null,
+  name         text not null default 'Default Key',
+  key_hash     text not null unique,
+  key_prefix   text not null,
+  role         text default 'admin' check (role in ('owner','admin','member','viewer')),
+  active       boolean default true,
+  last_used_at timestamptz,
+  created_at   timestamptz default now()
+);
+create index on api_keys(workspace_id);
+create index on api_keys(key_hash);
+
+-- ── Workspace Invites ─────────────────────
+create table if not exists workspace_invites (
+  id           uuid primary key default gen_random_uuid(),
+  workspace_id uuid references workspaces(id) on delete cascade,
+  email        text not null,
+  role         text default 'member' check (role in ('owner','admin','member','viewer')),
+  token        text not null unique default encode(gen_random_bytes(32), 'hex'),
+  invited_by   uuid not null,
+  accepted     boolean default false,
+  expires_at   timestamptz default now() + interval '7 days',
+  created_at   timestamptz default now()
+);
+create index on workspace_invites(workspace_id);
+create index on workspace_invites(token);
+
 -- ── Row Level Security ────────────────────
-alter table workspaces       enable row level security;
-alter table workspace_members enable row level security;
-alter table pipelines        enable row level security;
-alter table stages           enable row level security;
-alter table contacts         enable row level security;
-alter table threads          enable row level security;
-alter table messages         enable row level security;
-alter table campaigns        enable row level security;
-alter table automations      enable row level security;
-alter table tasks            enable row level security;
-alter table activity_log     enable row level security;
+alter table workspaces         enable row level security;
+alter table workspace_members  enable row level security;
+alter table pipelines          enable row level security;
+alter table stages             enable row level security;
+alter table field_definitions  enable row level security;
+alter table contacts           enable row level security;
+alter table threads            enable row level security;
+alter table messages           enable row level security;
+alter table campaigns          enable row level security;
+alter table sequence_steps     enable row level security;
+alter table automations        enable row level security;
+alter table tasks               enable row level security;
+alter table activity_log       enable row level security;
+alter table api_keys           enable row level security;
+alter table workspace_invites  enable row level security;
 
 -- Workspace member check helper
 create or replace function is_workspace_member(ws_id uuid)
@@ -219,13 +255,51 @@ returns boolean language sql security definer as $$
   );
 $$;
 
--- Workspace RLS
+-- Workspace owner/admin check helper
+create or replace function is_workspace_admin(ws_id uuid)
+returns boolean language sql security definer as $$
+  select exists (
+    select 1 from workspace_members
+    where workspace_id = ws_id and user_id = auth.uid()
+      and role in ('owner', 'admin')
+  );
+$$;
+
+-- Workspaces
 create policy "Members can view their workspace" on workspaces
   for select using (is_workspace_member(id));
+create policy "Owners can update their workspace" on workspaces
+  for update using (owner_id = auth.uid());
 
--- Generic member policy for all workspace-scoped tables
--- (apply same pattern to each table)
-create policy "Members can access workspace data" on contacts
+-- Workspace members
+create policy "Members can view workspace members" on workspace_members
+  for select using (is_workspace_member(workspace_id));
+create policy "Admins can manage workspace members" on workspace_members
+  for all using (is_workspace_admin(workspace_id));
+
+-- Pipelines + stages (members read, admins write)
+create policy "Members can view pipelines" on pipelines
+  for select using (is_workspace_member(workspace_id));
+create policy "Admins can manage pipelines" on pipelines
+  for all using (is_workspace_admin(workspace_id));
+
+create policy "Members can view stages" on stages
+  for select using (
+    exists (select 1 from pipelines where pipelines.id = stages.pipeline_id and is_workspace_member(pipelines.workspace_id))
+  );
+create policy "Admins can manage stages" on stages
+  for all using (
+    exists (select 1 from pipelines where pipelines.id = stages.pipeline_id and is_workspace_admin(pipelines.workspace_id))
+  );
+
+-- Field definitions
+create policy "Members can view field definitions" on field_definitions
+  for select using (is_workspace_member(workspace_id));
+create policy "Admins can manage field definitions" on field_definitions
+  for all using (is_workspace_admin(workspace_id));
+
+-- Contacts, threads, messages, campaigns, automations (all members)
+create policy "Members can access contacts" on contacts
   for all using (is_workspace_member(workspace_id));
 
 create policy "Members can access threads" on threads
@@ -237,8 +311,31 @@ create policy "Members can access messages" on messages
 create policy "Members can access campaigns" on campaigns
   for all using (is_workspace_member(workspace_id));
 
+create policy "Members can access sequence steps" on sequence_steps
+  for all using (
+    exists (select 1 from campaigns where campaigns.id = sequence_steps.sequence_id and is_workspace_member(campaigns.workspace_id))
+  );
+
 create policy "Members can access automations" on automations
   for all using (is_workspace_member(workspace_id));
+
+-- Tasks
+create policy "Members can access tasks" on tasks
+  for all using (is_workspace_member(workspace_id));
+
+-- Activity log (read-only for members, insert via service role)
+create policy "Members can view activity log" on activity_log
+  for select using (is_workspace_member(workspace_id));
+
+-- API keys (owner/admin only)
+create policy "Admins can manage api keys" on api_keys
+  for all using (is_workspace_admin(workspace_id));
+
+-- Workspace invites (admins manage, invitees can read their own token)
+create policy "Admins can manage invites" on workspace_invites
+  for all using (is_workspace_admin(workspace_id));
+create policy "Invitees can read their invite" on workspace_invites
+  for select using (email = auth.email());
 
 -- ── Realtime ──────────────────────────────
 -- Enable realtime for live inbox updates
