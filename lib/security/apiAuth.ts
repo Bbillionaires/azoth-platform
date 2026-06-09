@@ -88,34 +88,24 @@ async function getAuthContext(req: NextRequest): Promise<AuthContext | null> {
   }
 
   // ── Session cookie auth (for browser) ──
-  // Uncomment when Supabase is connected:
-  // const { createServerSupabase } = await import('@/lib/supabase')
-  // const supabase = createServerSupabase()
-  // const { data: { user }, error } = await supabase.auth.getUser()
-  // if (error || !user) return null
-  //
-  // const { data: member } = await supabase
-  //   .from('workspace_members')
-  //   .select('workspace_id, role')
-  //   .eq('user_id', user.id)
-  //   .single()
-  //
-  // if (!member) return null
-  //
-  // return {
-  //   user_id:      user.id,
-  //   email:        user.email!,
-  //   workspace_id: member.workspace_id,
-  //   role:         member.role,
-  //   ip,
-  // }
+  const { createServerSupabase } = await import('@/lib/supabase-server')
+  const supabase = createServerSupabase()
+  const { data: { user }, error } = await supabase.auth.getUser()
+  if (error || !user) return null
 
-  // Demo mode: return mock context
+  const { data: member } = await supabase
+    .from('workspace_members')
+    .select('workspace_id, role')
+    .eq('user_id', user.id)
+    .single()
+
+  if (!member) return null
+
   return {
-    user_id:      'user_dearis',
-    email:        'dearis@company.com',
-    workspace_id: 'ws_demo_001',
-    role:         'owner',
+    user_id:      user.id,
+    email:        user.email!,
+    workspace_id: member.workspace_id,
+    role:         member.role,
     ip,
   }
 }
@@ -138,14 +128,27 @@ async function validateApiKey(key: string, ip: string): Promise<AuthContext | nu
   //
   // return { ...data, email: 'api@client', ip }
 
-  // Demo: accept any key starting with 'azoth_live_'
-  if (!key.startsWith('azoth_live_') && !key.startsWith('nx_test_')) return null
+  // Keys are stored hashed in the database
+  const { createServerSupabase } = await import('@/lib/supabase-server')
+  const supabase = createServerSupabase()
+  const hash = await hashApiKey(key)
+  const { data } = await supabase
+    .from('api_keys')
+    .select('workspace_id, user_id, role, email')
+    .eq('key_hash', hash)
+    .eq('active', true)
+    .single()
+
+  if (!data) return null
+
+  // Update last_used_at non-blocking
+  supabase.from('api_keys').update({ last_used_at: new Date().toISOString() }).eq('key_hash', hash)
 
   return {
-    user_id:      'api_client',
-    email:        'api@client',
-    workspace_id: 'ws_demo_001',
-    role:         'admin',
+    user_id:      data.user_id,
+    email:        data.email ?? 'api@client',
+    workspace_id: data.workspace_id,
+    role:         data.role,
     ip,
   }
 }

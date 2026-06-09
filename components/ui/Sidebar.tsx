@@ -292,11 +292,11 @@ export function Sidebar() {
           <button
             onClick={logout}
             title="Sign out"
-            style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 16, color: 'var(--t3)', padding: '4px 6px', borderRadius: 6, lineHeight: 1 }}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 11.5, color: 'var(--t3)', padding: '4px 8px', borderRadius: 6, lineHeight: 1, display: 'flex', alignItems: 'center', gap: 4, fontFamily: 'inherit' }}
             onMouseEnter={e => (e.currentTarget.style.color = 'var(--red)')}
             onMouseLeave={e => (e.currentTarget.style.color = 'var(--t3)')}
           >
-            ⏻
+            ⏻ Log out
           </button>
         </div>
       </div>
