@@ -65,16 +65,19 @@ export async function POST(
     return NextResponse.json({ error: `Campaign status is '${campaign.status}', must be draft or scheduled to send` }, { status: 400 })
   }
 
-  // Fetch workspace integrations
+  // Fetch workspace integrations (supports both 'type'/'enabled' and 'provider'/'active' column shapes)
   const { data: integrationRows } = await supabase
     .from('workspace_integrations')
-    .select('provider, config')
+    .select('*')
     .eq('workspace_id', workspaceId)
-    .eq('active', true)
 
   const integrations: Record<string, Record<string, string>> = {}
   for (const row of integrationRows ?? []) {
-    integrations[row.provider] = row.config ?? {}
+    const key: string = row.type ?? row.provider ?? ''
+    const isActive: boolean = row.enabled ?? row.active ?? false
+    if (key && isActive) {
+      integrations[key] = row.config ?? {}
+    }
   }
 
   // Fetch contacts
@@ -103,27 +106,64 @@ export async function POST(
   let failed = 0
 
   if (campaign.type === 'email') {
-    const apiKey = integrations?.resend?.api_key || process.env.RESEND_API_KEY
-    if (!apiKey) {
-      return NextResponse.json({ error: 'No Resend API key configured' }, { status: 400 })
+    // Priority: Gmail > Resend > SendGrid
+    const gmailConfig = integrations?.gmail as Record<string, string> | undefined
+    const resendApiKey = integrations?.resend?.api_key || process.env.RESEND_API_KEY
+    const sendgridApiKey = integrations?.sendgrid?.api_key || process.env.SENDGRID_API_KEY
+
+    const hasGmail = gmailConfig && (gmailConfig.access_token || (gmailConfig.gmail_email && gmailConfig.gmail_app_password))
+
+    if (!hasGmail && !resendApiKey && !sendgridApiKey) {
+      return NextResponse.json({ error: 'No email provider configured (Gmail, Resend, or SendGrid)' }, { status: 400 })
     }
 
     for (const contact of contacts) {
       if (!contact.email) { failed++; continue }
       const subject = interpolate(campaign.subject ?? '(no subject)', contact)
       const html    = interpolate(campaign.body ?? '', contact)
+
       try {
-        const res = await fetch('https://api.resend.com/emails', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
-          body: JSON.stringify({
-            from: `${campaign.from_name ?? 'AZOTH'} <${campaign.from_email ?? 'no-reply@azoth.app'}>`,
-            to: [contact.email],
-            subject,
-            html,
-          }),
-        })
-        if (res.ok) { sent++ } else { failed++ }
+        if (hasGmail) {
+          // Send via Gmail
+          const res = await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/integrations/gmail/send`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              workspace_id: workspaceId,
+              to: contact.email,
+              subject,
+              html,
+              from_name: campaign.from_name ?? 'AZOTH',
+            }),
+          })
+          if (res.ok) { sent++ } else { failed++ }
+        } else if (resendApiKey) {
+          // Send via Resend
+          const res = await fetch('https://api.resend.com/emails', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${resendApiKey}` },
+            body: JSON.stringify({
+              from: `${campaign.from_name ?? 'AZOTH'} <${campaign.from_email ?? 'no-reply@azoth.app'}>`,
+              to: [contact.email],
+              subject,
+              html,
+            }),
+          })
+          if (res.ok) { sent++ } else { failed++ }
+        } else if (sendgridApiKey) {
+          // Send via SendGrid
+          const res = await fetch('https://api.sendgrid.com/v3/mail/send', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${sendgridApiKey}` },
+            body: JSON.stringify({
+              personalizations: [{ to: [{ email: contact.email }] }],
+              from: { email: campaign.from_email ?? 'no-reply@azoth.app', name: campaign.from_name ?? 'AZOTH' },
+              subject,
+              content: [{ type: 'text/html', value: html }],
+            }),
+          })
+          if (res.ok) { sent++ } else { failed++ }
+        }
       } catch { failed++ }
     }
   } else if (campaign.type === 'sms') {
