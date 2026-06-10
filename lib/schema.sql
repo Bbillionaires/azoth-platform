@@ -362,7 +362,13 @@ create policy "Invitees can read their invite" on workspace_invites
   for select using (email = auth.email());
 
 -- ── Realtime ──────────────────────────────
--- Enable realtime for live inbox updates
-alter publication supabase_realtime add table messages;
-alter publication supabase_realtime add table threads;
-alter publication supabase_realtime add table activity_log;
+-- Enable realtime for live inbox updates (safe to re-run)
+do $$ begin
+  alter publication supabase_realtime add table messages;
+exception when others then null; end $$;
+do $$ begin
+  alter publication supabase_realtime add table threads;
+exception when others then null; end $$;
+do $$ begin
+  alter publication supabase_realtime add table activity_log;
+exception when others then null; end $$;
