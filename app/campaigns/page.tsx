@@ -110,6 +110,33 @@ export default function CampaignsPage() {
   const [modal, setModal] = useState<Campaign | true | null>(null)
   const [filter, setFilter] = useState<'all' | CampaignType>('all')
   const [view, setView] = useState<'list' | 'stats'>('list')
+  const [sending, setSending] = useState<Record<string, boolean>>({})
+  const [sendResult, setSendResult] = useState<Record<string, { sent: number; failed: number } | { error: string }>>({})
+
+  const sendCampaign = async (campId: string) => {
+    setSending(p => ({ ...p, [campId]: true }))
+    setSendResult(p => { const n = { ...p }; delete n[campId]; return n })
+    try {
+      const res = await fetch(`/api/campaigns/${campId}/send`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${process.env.NEXT_PUBLIC_AZOTH_API_KEY || 'nx_test_demo'}`,
+        },
+      })
+      const json = await res.json()
+      if (!res.ok) {
+        setSendResult(p => ({ ...p, [campId]: { error: json.error ?? 'Send failed' } }))
+      } else {
+        setSendResult(p => ({ ...p, [campId]: { sent: json.sent, failed: json.failed } }))
+        setCampaigns(prev => prev.map(c => c.id === campId ? { ...c, status: 'active' as CampaignStatus, sent_count: c.sent_count + (json.sent ?? 0) } : c))
+      }
+    } catch {
+      setSendResult(p => ({ ...p, [campId]: { error: 'Network error' } }))
+    } finally {
+      setSending(p => ({ ...p, [campId]: false }))
+    }
+  }
 
   const filtered = campaigns.filter(c => filter === 'all' || c.type === filter)
 
@@ -202,12 +229,32 @@ export default function CampaignsPage() {
                   {c.status === 'scheduled' && c.scheduled_at ? `Sends ${new Date(c.scheduled_at).toLocaleDateString()}` : 'Not sent yet'}
                 </div>
               )}
-              <div style={{ display: 'flex', gap: 6, flexShrink: 0, alignItems: 'center' }}>
-                {(c.status === 'active' || c.status === 'paused') && (
-                  <Toggle on={c.status === 'active'} onChange={() => toggleStatus(c.id)} />
+              <div style={{ display: 'flex', gap: 6, flexShrink: 0, alignItems: 'center', flexDirection: 'column' }}>
+                <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                  {(c.status === 'active' || c.status === 'paused') && (
+                    <Toggle on={c.status === 'active'} onChange={() => toggleStatus(c.id)} />
+                  )}
+                  {(c.status === 'draft' || c.status === 'scheduled') && c.type !== 'sequence' && (
+                    <button
+                      className="btn btn-acc btn-xs"
+                      disabled={!!sending[c.id]}
+                      onClick={() => sendCampaign(c.id)}
+                      style={{ minWidth: 58 }}
+                    >
+                      {sending[c.id] ? '...' : '▶ Send'}
+                    </button>
+                  )}
+                  <button className="btn btn-ghost btn-xs" onClick={() => setModal(c)}>Edit</button>
+                  <button className="btn btn-danger btn-xs" onClick={() => del(c.id)}>✕</button>
+                </div>
+                {sendResult[c.id] && (
+                  <div style={{ fontSize: 11, color: 'error' in sendResult[c.id] ? 'var(--red)' : 'var(--green)', whiteSpace: 'nowrap' }}>
+                    {'error' in sendResult[c.id]
+                      ? (sendResult[c.id] as { error: string }).error
+                      : `Sent ${(sendResult[c.id] as { sent: number; failed: number }).sent}, failed ${(sendResult[c.id] as { sent: number; failed: number }).failed}`
+                    }
+                  </div>
                 )}
-                <button className="btn btn-ghost btn-xs" onClick={() => setModal(c)}>Edit</button>
-                <button className="btn btn-danger btn-xs" onClick={() => del(c.id)}>✕</button>
               </div>
             </div>
           )

@@ -361,6 +361,23 @@ create policy "Admins can manage invites" on workspace_invites
 create policy "Invitees can read their invite" on workspace_invites
   for select using (email = auth.email());
 
+-- ── Workspace Integrations ────────────────
+create table if not exists workspace_integrations (
+  id           uuid primary key default gen_random_uuid(),
+  workspace_id uuid references workspaces(id) on delete cascade,
+  provider     text not null,
+  config       jsonb default '{}',
+  active       boolean default true,
+  created_at   timestamptz default now(),
+  updated_at   timestamptz default now(),
+  unique(workspace_id, provider)
+);
+create index on workspace_integrations(workspace_id);
+alter table workspace_integrations enable row level security;
+drop policy if exists "Admins can manage integrations" on workspace_integrations;
+create policy "Admins can manage integrations" on workspace_integrations
+  for all using (is_workspace_admin(workspace_id));
+
 -- ── Realtime ──────────────────────────────
 -- Enable realtime for live inbox updates (safe to re-run)
 do $$ begin

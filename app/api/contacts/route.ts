@@ -88,5 +88,12 @@ export async function POST(req: NextRequest) {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
+  // Fire automations non-blocking
+  fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/automations/execute`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-internal-secret': process.env.WEBHOOK_SECRET || '' },
+    body: JSON.stringify({ event: 'contact_created', workspace_id: data.workspace_id, data }),
+  }).catch(() => {})
+
   return NextResponse.json({ contact: data }, { status: 201 })
 }
