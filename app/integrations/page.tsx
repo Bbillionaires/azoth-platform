@@ -15,17 +15,21 @@ interface SavedIntegration {
 
 /* ── Integration definitions ── */
 const INTEGRATIONS = [
-  { id: 'zapier',     name: 'Zapier',     icon: '⚡', desc: 'No-code automation · 5,000+ apps',  cat: 'automation', configurable: true  },
-  { id: 'make',       name: 'Make',       icon: '🔀', desc: 'Visual workflow automation',          cat: 'automation', configurable: false },
-  { id: 'n8n',        name: 'n8n',        icon: '🔧', desc: 'Self-hosted automation engine',       cat: 'automation', configurable: false },
-  { id: 'slack',      name: 'Slack',      icon: '💬', desc: 'Team notifications + deal alerts',    cat: 'comms',      configurable: true  },
-  { id: 'twilio',     name: 'Twilio',     icon: '📱', desc: 'SMS sending for campaigns',           cat: 'comms',      configurable: true  },
-  { id: 'sendgrid',   name: 'SendGrid',   icon: '✉️', desc: 'Transactional + bulk email',          cat: 'comms',      configurable: true  },
-  { id: 'calendly',   name: 'Calendly',   icon: '📅', desc: 'Book meetings → create contacts',     cat: 'tools',      configurable: true  },
-  { id: 'hubspot',    name: 'HubSpot',    icon: '🔶', desc: 'Bi-directional CRM sync',             cat: 'crm',        configurable: false },
-  { id: 'salesforce', name: 'Salesforce', icon: '☁️', desc: 'Enterprise CRM + opportunity sync',  cat: 'crm',        configurable: false },
-  { id: 'notion',     name: 'Notion',     icon: '📝', desc: 'Database + wiki sync',                cat: 'tools',      configurable: false },
-  { id: 'airtable',   name: 'Airtable',   icon: '📊', desc: 'Spreadsheet-style data sync',         cat: 'tools',      configurable: false },
+  { id: 'gmail',        name: 'Gmail',        icon: '📧', desc: 'Send emails via Gmail or Google Workspace',    cat: 'comms',      configurable: true,  note: ''                                                        },
+  { id: 'zapier',       name: 'Zapier',       icon: '⚡', desc: 'No-code automation · 5,000+ apps',            cat: 'automation', configurable: true,  note: ''                                                        },
+  { id: 'make',         name: 'Make',         icon: '🔀', desc: 'Visual workflow automation',                   cat: 'automation', configurable: false, note: ''                                                        },
+  { id: 'n8n',          name: 'n8n',          icon: '🔧', desc: 'Self-hosted automation engine',                cat: 'automation', configurable: false, note: ''                                                        },
+  { id: 'slack',        name: 'Slack',        icon: '💬', desc: 'Team notifications + deal alerts',             cat: 'comms',      configurable: true,  note: ''                                                        },
+  { id: 'twilio',       name: 'Twilio',       icon: '📱', desc: 'SMS sending for campaigns',                    cat: 'comms',      configurable: true,  note: ''                                                        },
+  { id: 'sendhub',      name: 'SendHub',      icon: '💬', desc: 'Send SMS via SendHub — alternative to Twilio', cat: 'comms',      configurable: true,  note: ''                                                        },
+  { id: 'twilio_voice', name: 'Twilio Voice', icon: '📞', desc: 'Click-to-call from any contact using Twilio Voice', cat: 'comms', configurable: true,  note: 'Requires a TwiML App SID from your Twilio console'       },
+  { id: 'zoom',         name: 'Zoom',         icon: '🎥', desc: 'Generate Zoom meeting links from contact cards', cat: 'tools',    configurable: true,  note: 'Uses Zoom Server-to-Server OAuth'                        },
+  { id: 'sendgrid',     name: 'SendGrid',     icon: '✉️', desc: 'Transactional + bulk email',                   cat: 'comms',      configurable: true,  note: ''                                                        },
+  { id: 'calendly',     name: 'Calendly',     icon: '📅', desc: 'Book meetings → create contacts',              cat: 'tools',      configurable: true,  note: ''                                                        },
+  { id: 'hubspot',      name: 'HubSpot',      icon: '🔶', desc: 'Bi-directional CRM sync',                      cat: 'crm',        configurable: false, note: ''                                                        },
+  { id: 'salesforce',   name: 'Salesforce',   icon: '☁️', desc: 'Enterprise CRM + opportunity sync',           cat: 'crm',        configurable: false, note: ''                                                        },
+  { id: 'notion',       name: 'Notion',       icon: '📝', desc: 'Database + wiki sync',                         cat: 'tools',      configurable: false, note: ''                                                        },
+  { id: 'airtable',     name: 'Airtable',     icon: '📊', desc: 'Spreadsheet-style data sync',                  cat: 'tools',      configurable: false, note: ''                                                        },
 ]
 
 const cats = ['all', 'automation', 'comms', 'crm', 'tools']
@@ -78,6 +82,78 @@ function ConfigForm({
 
   return (
     <div style={{ background: 'var(--s1)', border: '1px solid var(--acc-br)', borderRadius: 10, padding: 16, marginTop: 8 }}>
+      {type === 'gmail' && (
+        <div>
+          {/* Method B — OAuth */}
+          <div style={{ marginBottom: 12 }}>
+            {existing.access_token ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5 }}>
+                <span style={{ color: 'var(--green)' }}>✓</span>
+                <span style={{ color: 'var(--t2)' }}>Connected as <strong>{existing.email}</strong></span>
+              </div>
+            ) : (
+              <a
+                href={`/api/integrations/gmail/auth?workspace_id=${activeWsId}`}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  padding: '8px 14px',
+                  background: '#fff',
+                  color: '#3c4043',
+                  border: '1px solid #dadce0',
+                  borderRadius: 8,
+                  fontSize: 13,
+                  fontWeight: 500,
+                  textDecoration: 'none',
+                  cursor: 'pointer',
+                }}
+              >
+                <span>🔵</span> Connect with Google
+              </a>
+            )}
+          </div>
+
+          {/* Divider */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12, color: 'var(--t3)', fontSize: 11 }}>
+            <div style={{ flex: 1, height: 1, background: 'var(--br)' }} />
+            — or —
+            <div style={{ flex: 1, height: 1, background: 'var(--br)' }} />
+          </div>
+
+          {/* Method A — App Password */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+            <div className="field">
+              <label className="fl">Gmail Address</label>
+              <input
+                className="fi"
+                type="email"
+                value={fields.gmail_email ?? ''}
+                onChange={e => set('gmail_email', e.target.value)}
+                placeholder="you@gmail.com"
+              />
+            </div>
+            <div className="field">
+              <label className="fl">App Password</label>
+              <input
+                className="fi"
+                type="password"
+                value={fields.gmail_app_password ?? ''}
+                onChange={e => set('gmail_app_password', e.target.value)}
+                placeholder="xxxx xxxx xxxx xxxx"
+              />
+            </div>
+          </div>
+          <div style={{ fontSize: 11, color: 'var(--t3)', marginTop: 6, lineHeight: 1.5 }}>
+            Generate an App Password at{' '}
+            <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noreferrer" style={{ color: 'var(--acc)' }}>
+              myaccount.google.com/apppasswords
+            </a>
+            . Works with personal Gmail and Google Workspace.
+          </div>
+        </div>
+      )}
+
       {type === 'slack' && (
         <div className="field">
           <label className="fl">Slack Incoming Webhook URL</label>
@@ -116,6 +192,57 @@ function ConfigForm({
             </div>
           </div>
         </>
+      )}
+
+      {type === 'sendhub' && (
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+          <div className="field">
+            <label className="fl">API Key</label>
+            <input className="fi" type="password" value={fields.api_key ?? ''} onChange={e => set('api_key', e.target.value)} placeholder="SendHub API key" />
+          </div>
+          <div className="field">
+            <label className="fl">Phone Number</label>
+            <input className="fi" value={fields.phone_number ?? ''} onChange={e => set('phone_number', e.target.value)} placeholder="+15551234567" />
+          </div>
+        </div>
+      )}
+
+      {type === 'twilio_voice' && (
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+          <div className="field">
+            <label className="fl">Account SID</label>
+            <input className="fi" value={fields.account_sid ?? ''} onChange={e => set('account_sid', e.target.value)} placeholder="ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" />
+          </div>
+          <div className="field">
+            <label className="fl">Auth Token</label>
+            <input className="fi" type="password" value={fields.auth_token ?? ''} onChange={e => set('auth_token', e.target.value)} placeholder="••••••••••••••••" />
+          </div>
+          <div className="field">
+            <label className="fl">Phone Number</label>
+            <input className="fi" value={fields.phone_number ?? ''} onChange={e => set('phone_number', e.target.value)} placeholder="+15551234567" />
+          </div>
+          <div className="field">
+            <label className="fl">TwiML App SID</label>
+            <input className="fi" value={fields.twiml_app_sid ?? ''} onChange={e => set('twiml_app_sid', e.target.value)} placeholder="APxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" />
+          </div>
+        </div>
+      )}
+
+      {type === 'zoom' && (
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+          <div className="field">
+            <label className="fl">API Key</label>
+            <input className="fi" type="password" value={fields.api_key ?? ''} onChange={e => set('api_key', e.target.value)} placeholder="Zoom API Key" />
+          </div>
+          <div className="field">
+            <label className="fl">API Secret</label>
+            <input className="fi" type="password" value={fields.api_secret ?? ''} onChange={e => set('api_secret', e.target.value)} placeholder="Zoom API Secret" />
+          </div>
+          <div className="field">
+            <label className="fl">Account ID</label>
+            <input className="fi" value={fields.account_id ?? ''} onChange={e => set('account_id', e.target.value)} placeholder="Zoom Account ID" />
+          </div>
+        </div>
       )}
 
       {type === 'zapier' && (
@@ -345,13 +472,20 @@ export default function IntegrationsPage() {
 
                     {/* Inline config form */}
                     {isOpen && i.configurable && activeWsId && (
-                      <ConfigForm
-                        type={i.id}
-                        activeWsId={activeWsId}
-                        existing={getSaved(i.id)?.config ?? {}}
-                        onSaved={onSaved}
-                        onCancel={() => setOpenConfig(null)}
-                      />
+                      <>
+                        <ConfigForm
+                          type={i.id}
+                          activeWsId={activeWsId}
+                          existing={getSaved(i.id)?.config ?? {}}
+                          onSaved={onSaved}
+                          onCancel={() => setOpenConfig(null)}
+                        />
+                        {i.note && (
+                          <div style={{ fontSize: 11, color: 'var(--t3)', marginTop: 6, paddingLeft: 2 }}>
+                            ⚠️ {i.note}
+                          </div>
+                        )}
+                      </>
                     )}
                   </div>
                 )

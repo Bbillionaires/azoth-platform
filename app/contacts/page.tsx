@@ -5,6 +5,140 @@ import { Topbar, Avatar, StagePill } from '@/components/ui'
 import { fmtFull, AVATAR_COLORS, timeAgo } from '@/lib/utils'
 import type { Contact } from '@/lib/types'
 
+/* ── SMS Modal ── */
+function SmsModal({ contact, workspaceId, onClose }: { contact: Contact; workspaceId: string; onClose: () => void }) {
+  const [message, setMessage] = useState('')
+  const [sending, setSending] = useState(false)
+  const [sent, setSent] = useState(false)
+
+  const send = async () => {
+    if (!message.trim()) return
+    setSending(true)
+    try {
+      const res = await fetch('/api/sms', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ to: contact.phone, message, workspace_id: workspaceId }),
+      })
+      const json = await res.json()
+      if (json.success) { setSent(true); setTimeout(onClose, 1200) }
+      else alert(json.error ?? 'SMS failed')
+    } finally { setSending(false) }
+  }
+
+  return (
+    <div className="ov" onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="modal" style={{ maxWidth: 400 }}>
+        <div className="modal-title">💬 Send SMS</div>
+        <div className="modal-sub">To: {contact.name} · {contact.phone}</div>
+        <div className="field" style={{ marginTop: 12 }}>
+          <label className="fl">Message</label>
+          <textarea
+            className="fta"
+            rows={4}
+            value={message}
+            onChange={e => setMessage(e.target.value)}
+            placeholder="Type your message…"
+          />
+        </div>
+        {sent && <div style={{ color: 'var(--green)', fontSize: 13, marginTop: 8 }}>✓ SMS sent!</div>}
+        <div className="modal-foot">
+          <button className="btn btn-ghost" onClick={onClose}>Cancel</button>
+          <button className="btn btn-acc" onClick={send} disabled={sending || !message.trim()}>
+            {sending ? 'Sending…' : 'Send SMS'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/* ── Milestone definitions ── */
+const MILESTONES = [
+  { icon: '📞', label: 'Call Attempted',    tag: 'called'            },
+  { icon: '✅', label: 'Call Answered',      tag: 'call-answered'     },
+  { icon: '📧', label: 'Email Given',        tag: 'email-given',      onlyIfNoEmail: true },
+  { icon: '📬', label: 'Email Opened',       tag: 'email-opened'      },
+  { icon: '📅', label: 'Meeting Scheduled',  tag: 'meeting-scheduled' },
+  { icon: '📄', label: 'Contract Sent',      tag: 'contract-sent'     },
+  { icon: '✍️', label: 'Contract Signed',   tag: 'contract-signed'   },
+  { icon: '💰', label: 'First Payment',      tag: 'paid'              },
+  { icon: '🏆', label: 'Full Payment',       tag: 'paid-full'         },
+  { icon: '🤝', label: 'Referral Sent',      tag: 'referral',         isReferral: true },
+]
+
+/* ── Milestone Modal ── */
+function MilestoneModal({ contact, onClose }: { contact: Contact; onClose: () => void }) {
+  const { updateContact } = useApp()
+  const [logged, setLogged] = useState(false)
+
+  const tags = contact.tags ?? []
+
+  const logMilestone = (tag: string, isReferral = false) => {
+    let newTag = tag
+    if (isReferral) {
+      // Find highest referral-N tag and increment
+      const refs = tags.filter(t => /^referral-\d+$/.test(t))
+      const nums = refs.map(t => parseInt(t.split('-')[1])).filter(n => !isNaN(n))
+      const max = nums.length > 0 ? Math.max(...nums) : 0
+      newTag = `referral-${max + 1}`
+    }
+    if (!tags.includes(newTag)) {
+      updateContact({ ...contact, tags: [...tags, newTag] })
+    }
+    setLogged(true)
+    setTimeout(() => setLogged(false), 2000)
+  }
+
+  return (
+    <div className="ov" onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="modal" style={{ maxWidth: 480 }}>
+        <div className="modal-title">🏁 Log Milestone for {contact.name}</div>
+        <div className="modal-sub">Track progress through the race track</div>
+
+        {logged && (
+          <div style={{ color: 'var(--green)', fontSize: 13, fontWeight: 600, marginBottom: 10 }}>
+            Race track updated! 🏁
+          </div>
+        )}
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 12 }}>
+          {MILESTONES.map(m => {
+            if (m.onlyIfNoEmail && contact.email) return null
+            const hasTag = m.isReferral
+              ? tags.some(t => /^referral-\d+$/.test(t))
+              : tags.includes(m.tag)
+            return (
+              <button
+                key={m.tag}
+                className="btn btn-ghost"
+                style={{
+                  justifyContent: 'flex-start',
+                  gap: 8,
+                  fontSize: 12.5,
+                  padding: '8px 12px',
+                  background: hasTag ? 'rgba(62,207,142,.1)' : '',
+                  borderColor: hasTag ? 'rgba(62,207,142,.25)' : '',
+                  color: hasTag ? 'var(--green)' : '',
+                }}
+                onClick={() => logMilestone(m.tag, m.isReferral)}
+              >
+                <span>{m.icon}</span>
+                <span style={{ flex: 1, textAlign: 'left' }}>{m.label}</span>
+                {hasTag && <span style={{ fontSize: 11 }}>✓</span>}
+              </button>
+            )
+          })}
+        </div>
+
+        <div className="modal-foot" style={{ marginTop: 16 }}>
+          <button className="btn btn-ghost" onClick={onClose}>Close</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 const TODAY = new Date().toISOString().split('T')[0]
 
 function ContactModal({ contact, onSave, onClose }: { contact?: Contact | null; onSave: (c: Omit<Contact,'id'>) => void; onClose: () => void }) {
@@ -239,9 +373,11 @@ function ContactDetail({ contact, onClose, onEdit }: { contact: Contact; onClose
 }
 
 export default function ContactsPage() {
-  const { contacts, pipelines, fields, addContact, updateContact, deleteContact, loading } = useApp()
+  const { contacts, pipelines, fields, addContact, updateContact, deleteContact, loading, activeWsId } = useApp()
   const [modal, setModal] = useState<Contact | true | null>(null)
   const [detail, setDetail] = useState<Contact | null>(null)
+  const [smsContact, setSmsContact] = useState<Contact | null>(null)
+  const [milestoneContact, setMilestoneContact] = useState<Contact | null>(null)
   const [search, setSearch] = useState('')
   const [selPl, setSelPl] = useState('all')
   const [selStage, setSelStage] = useState('all')
@@ -365,7 +501,53 @@ export default function ContactsPage() {
                       {customFields.map(f=><td key={f.id} style={{fontSize:12,color:'var(--t2)'}}>{(c[f.key] as string)??'—'}</td>)}
                       <td style={{fontSize:11.5,color:'var(--t3)'}}>{c.last_contact}</td>
                       <td style={{paddingRight:18}}>
-                        <div className="row" style={{gap:5}} onClick={e=>e.stopPropagation()}>
+                        <div className="row" style={{gap:4}} onClick={e=>e.stopPropagation()}>
+                          {c.phone && (
+                            <button
+                              className="btn btn-ghost btn-xs"
+                              title="Call"
+                              style={{width:28,height:28,padding:0,fontSize:13}}
+                              onClick={async () => {
+                                if (!activeWsId) return
+                                const res = await fetch('/api/calls', {
+                                  method: 'POST',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify({ workspace_id: activeWsId, to: c.phone }),
+                                })
+                                const json = await res.json()
+                                if (!json.success) alert(json.error ?? 'Call failed')
+                              }}
+                            >📞</button>
+                          )}
+                          {c.phone && (
+                            <button
+                              className="btn btn-ghost btn-xs"
+                              title="SMS"
+                              style={{width:28,height:28,padding:0,fontSize:13}}
+                              onClick={() => setSmsContact(c)}
+                            >💬</button>
+                          )}
+                          <button
+                            className="btn btn-ghost btn-xs"
+                            title="Video Meet"
+                            style={{width:28,height:28,padding:0,fontSize:13}}
+                            onClick={async () => {
+                              if (!activeWsId) return
+                              const res = await fetch('/api/meetings', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ provider: 'zoom', workspace_id: activeWsId, contact_name: c.name }),
+                              })
+                              const json = await res.json()
+                              if (json.url) window.open(json.url, '_blank')
+                            }}
+                          >🎥</button>
+                          <button
+                            className="btn btn-ghost btn-xs"
+                            title="Log Milestone"
+                            style={{width:28,height:28,padding:0,fontSize:13}}
+                            onClick={() => setMilestoneContact(c)}
+                          >🏁</button>
                           <button className="btn btn-ghost btn-xs" onClick={()=>setModal(c)}>Edit</button>
                           <button className="btn btn-danger btn-xs" onClick={()=>deleteContact(c.id)}>✕</button>
                         </div>
@@ -394,6 +576,19 @@ export default function ContactsPage() {
           contact={detail}
           onClose={()=>setDetail(null)}
           onEdit={()=>{setModal(detail);setDetail(null)}}
+        />
+      )}
+      {smsContact && activeWsId && (
+        <SmsModal
+          contact={smsContact}
+          workspaceId={activeWsId}
+          onClose={() => setSmsContact(null)}
+        />
+      )}
+      {milestoneContact && (
+        <MilestoneModal
+          contact={milestoneContact}
+          onClose={() => setMilestoneContact(null)}
         />
       )}
     </>
