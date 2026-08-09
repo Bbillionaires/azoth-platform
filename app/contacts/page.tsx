@@ -1,5 +1,5 @@
 'use client'
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useApp } from '@/context/AppContext'
 import { Topbar, Avatar, StagePill } from '@/components/ui'
 import { fmtFull, AVATAR_COLORS, timeAgo } from '@/lib/utils'
@@ -22,11 +22,23 @@ function ContactModal({ contact, onSave, onClose }: { contact?: Contact | null; 
     color: AVATAR_COLORS[0], created_at: TODAY, last_contact: TODAY,
   }
 
-  const [f, setF] = useState<Omit<Contact,'id'>>(contact ? { ...contact } : blank)
-  const [tagsStr, setTagsStr] = useState((contact?.tags ?? []).join(', '))
+  const DRAFT_KEY = 'azoth-contact-draft'
+  const savedDraft = !contact && typeof window !== 'undefined'
+    ? (() => { try { return JSON.parse(localStorage.getItem(DRAFT_KEY) ?? 'null') } catch { return null } })()
+    : null
+  const [f, setF] = useState<Omit<Contact,'id'>>(contact ? { ...contact } : (savedDraft ?? blank))
+  const [tagsStr, setTagsStr] = useState(savedDraft?.['_tagsStr'] ?? (contact?.tags ?? []).join(', '))
   const set = (k: string, v: unknown) => setF(p => ({ ...p, [k]: v }))
+
+  // Persist draft to localStorage while form is open (new contacts only)
+  useEffect(() => {
+    if (contact) return
+    try { localStorage.setItem(DRAFT_KEY, JSON.stringify({ ...f, _tagsStr: tagsStr })) } catch {}
+  }, [f, tagsStr, contact])
   const selPl = pipelines.find(p => p.id === f.pipeline_id) ?? pipelines[0]
   const customFields = fields.filter(x => !x.builtin)
+
+  const clearDraft = () => { try { localStorage.removeItem('azoth-contact-draft') } catch {} }
 
   const save = () => {
     if (!f.name || !f.email) return
@@ -34,6 +46,7 @@ function ContactModal({ contact, onSave, onClose }: { contact?: Contact | null; 
     const tags = tagsStr.split(',').map(t => t.trim()).filter(Boolean)
     // Strip id entirely — let Supabase generate it
     const { id: _ignored, ...rest } = f as any
+    clearDraft()
     onSave({
       ...rest,
       workspace_id: activeWsId,
@@ -46,7 +59,7 @@ function ContactModal({ contact, onSave, onClose }: { contact?: Contact | null; 
   }
 
   return (
-    <div className="ov" onClick={e => e.target === e.currentTarget && onClose()}>
+    <div className="ov" onClick={e => { if (e.target === e.currentTarget) { clearDraft(); onClose() } }}>
       <div className="modal">
         <div className="modal-title">{contact ? 'Edit Contact' : 'New Contact'}</div>
         <div className="modal-sub">{contact ? 'Update contact record' : 'Add a contact to your CRM'}</div>
@@ -129,7 +142,7 @@ function ContactModal({ contact, onSave, onClose }: { contact?: Contact | null; 
           </div>
         </div>
         <div className="modal-foot">
-          <button className="btn btn-ghost" onClick={onClose}>Cancel</button>
+          <button className="btn btn-ghost" onClick={() => { clearDraft(); onClose() }}>Cancel</button>
           <button className="btn btn-acc" onClick={save}>{contact?'Save Changes':'Add Contact'}</button>
         </div>
       </div>

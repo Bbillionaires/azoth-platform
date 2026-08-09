@@ -231,8 +231,26 @@ function FieldEditor() {
 
 // ── Workspace ─────────────────────────────
 function WorkspaceSettings() {
-  const { workspace, setWorkspace } = useApp()
+  const { workspace, setWorkspace, activeWsId } = useApp()
   const set = (k: string, v: string) => setWorkspace((w: any) => ({ ...w, [k]: v }))
+  const [deleting, setDeleting] = useState(false)
+  const [confirmName, setConfirmName] = useState('')
+
+  const deleteWorkspace = async () => {
+    if (confirmName !== workspace?.name) { alert('Workspace name does not match.'); return }
+    if (!confirm('This will permanently delete your workspace and ALL data. This cannot be undone.')) return
+    setDeleting(true)
+    try {
+      const { createClient } = await import('@/lib/supabase')
+      const supabase = createClient()
+      await supabase.from('workspaces').delete().eq('id', activeWsId)
+      window.location.href = '/auth/signup'
+    } catch {
+      alert('Failed to delete workspace. Please try again.')
+      setDeleting(false)
+    }
+  }
+
   if (!workspace) return <div className="dim" style={{ padding: 32 }}>Loading workspace...</div>
   return (
     <div className="g2">
@@ -261,6 +279,25 @@ function WorkspaceSettings() {
           </div>
         </div>
       </div>
+      <div className="card" style={{ borderColor: '#f06060' }}>
+        <div className="sh mb" style={{ color: '#f06060' }}>Danger Zone</div>
+        <p style={{ fontSize: 12.5, color: 'var(--t3)', marginBottom: 12, lineHeight: 1.6 }}>
+          Deleting your workspace permanently removes all contacts, pipelines, campaigns, and team data. This action cannot be undone.
+        </p>
+        <div className="field" style={{ marginBottom: 12 }}>
+          <label className="fl">Type <strong>{workspace.name}</strong> to confirm</label>
+          <input className="fi" value={confirmName} onChange={e => setConfirmName(e.target.value)} placeholder={workspace.name} />
+        </div>
+        <button
+          className="btn btn-danger"
+          onClick={deleteWorkspace}
+          disabled={deleting || confirmName !== workspace.name}
+          style={{ opacity: confirmName !== workspace.name ? 0.4 : 1 }}
+        >
+          {deleting ? 'Deleting…' : 'Delete Workspace'}
+        </button>
+      </div>
+
       <div className="card">
         <div className="sh mb">Your Plan</div>
         <div style={{ background: 'var(--acc-bg)', border: '1px solid var(--acc-br)', borderRadius: 'var(--r10)', padding: '14px 16px', marginBottom: 16 }}>
