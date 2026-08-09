@@ -56,7 +56,7 @@ function ContactModal({ contact, onSave, onClose }: { contact?: Contact | null; 
       : resolvedPl?.stages?.[0]?.id ?? firstStageId
     if (!resolvedPipelineId || !resolvedStageId) return alert('Please select a pipeline and stage in Settings first')
     const tags = tagsStr.split(',').map(t => t.trim()).filter(Boolean)
-    const { id: _ignored, ...rest } = f as any
+    const { id: _ignored, _tagsStr: _t, ...rest } = f as any
     clearDraft()
     onSave({
       ...rest,
