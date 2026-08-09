@@ -24,7 +24,14 @@ function ContactModal({ contact, onSave, onClose }: { contact?: Contact | null; 
 
   const DRAFT_KEY = 'azoth-contact-draft'
   const savedDraft = !contact && typeof window !== 'undefined'
-    ? (() => { try { return JSON.parse(localStorage.getItem(DRAFT_KEY) ?? 'null') } catch { return null } })()
+    ? (() => {
+        try {
+          const d = JSON.parse(localStorage.getItem(DRAFT_KEY) ?? 'null')
+          // Discard draft if it belongs to a different workspace
+          if (d && d.workspace_id && d.workspace_id !== activeWsId) return null
+          return d
+        } catch { return null }
+      })()
     : null
   const [f, setF] = useState<Omit<Contact,'id'>>(contact ? { ...contact } : (savedDraft ?? blank))
   const [tagsStr, setTagsStr] = useState(savedDraft?.['_tagsStr'] ?? (contact?.tags ?? []).join(', '))
@@ -41,17 +48,21 @@ function ContactModal({ contact, onSave, onClose }: { contact?: Contact | null; 
   const clearDraft = () => { try { localStorage.removeItem('azoth-contact-draft') } catch {} }
 
   const save = () => {
-    if (!f.name || !f.email) return
-    if (!f.pipeline_id || !f.stage_id) { alert('Please select a pipeline and stage'); return }
+    if (!f.name || !f.email) return alert('Name and email are required')
+    // Use current workspace defaults if pipeline/stage is missing or stale
+    const resolvedPipelineId = pipelines.find(p => p.id === f.pipeline_id) ? f.pipeline_id : firstPipelineId
+    const resolvedPl = pipelines.find(p => p.id === resolvedPipelineId)
+    const resolvedStageId = resolvedPl?.stages?.find(s => s.id === f.stage_id) ? f.stage_id
+      : resolvedPl?.stages?.[0]?.id ?? firstStageId
+    if (!resolvedPipelineId || !resolvedStageId) return alert('Please select a pipeline and stage in Settings first')
     const tags = tagsStr.split(',').map(t => t.trim()).filter(Boolean)
-    // Strip id entirely — let Supabase generate it
     const { id: _ignored, ...rest } = f as any
     clearDraft()
     onSave({
       ...rest,
       workspace_id: activeWsId,
-      pipeline_id: f.pipeline_id || firstPipelineId,
-      stage_id: f.stage_id || firstStageId,
+      pipeline_id: resolvedPipelineId,
+      stage_id: resolvedStageId,
       value: Number(f.value) || 0,
       tags,
     })

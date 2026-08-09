@@ -168,7 +168,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
       .insert({ ...contactData, workspace_id: activeWsId })
       .select()
       .single()
-    if (error) { console.error('[AZOTH] addContact:', error); return }
+    if (error) {
+      console.error('[AZOTH] addContact:', error)
+      alert(`Failed to save contact: ${error.message}`)
+      return
+    }
     if (data) setContacts(p => [data, ...p])
   }, [activeWsId])
 

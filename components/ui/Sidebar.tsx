@@ -65,7 +65,7 @@ export function Sidebar() {
     load()
   }, [])
 
-  const activeWs = workspace ?? allWorkspaces[0]
+  const activeWs = workspace
   const activeAutos = automations.filter((a: any) => a.active).length
   const activeCamps = campaigns.filter((c: any) => c.status === 'active').length
 
