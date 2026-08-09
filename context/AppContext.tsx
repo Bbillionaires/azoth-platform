@@ -39,6 +39,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const supabase = createClient()
 
   const [loading,     setLoading]     = useState(true)
+  const [initialized, setInitialized] = useState(false)
   const [activeWsId,  setActiveWsIdState] = useState<string>('')
   const [workspace,   setWorkspace]   = useState<Workspace | null>(null)
   const [members,     setMembers]     = useState<WorkspaceMember[]>([])
@@ -105,11 +106,21 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
       if (!json.workspace) { setLoading(false); return }
 
-      const ws = json.workspace as Workspace
+      // Respect the workspace the user was last on — don't always reset to first workspace
+      const storedWsId = (() => { try { return localStorage.getItem('azoth-active-ws') } catch { return null } })()
+      const targetWsId = storedWsId || (json.workspace as Workspace).id
+
+      // Load the target workspace details if different from the default
+      let ws: Workspace = json.workspace as Workspace
+      if (storedWsId && storedWsId !== ws.id) {
+        const { data: storedWs } = await supabase.from('workspaces').select('*').eq('id', storedWsId).single()
+        if (storedWs) ws = storedWs
+      }
+
       setWorkspace(ws)
-      setActiveWsIdState(ws.id)
-      if (json.pipelines?.length) setPipelines(json.pipelines)
-      await loadWorkspaceData(ws.id)
+      setActiveWsIdState(targetWsId)
+      await loadWorkspaceData(targetWsId)
+      setInitialized(true)
     } catch (err) {
       console.error('[AZOTH] init:', err)
       setLoading(false)
@@ -120,14 +131,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
     // Run init on mount
     init()
 
-    // Re-run whenever auth state changes (login / logout)
+    // Only re-run on explicit sign-in (not token refresh) or sign-out
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === 'SIGNED_IN') init()
+      if (event === 'SIGNED_IN' && !initialized) init()
       if (event === 'SIGNED_OUT') {
         setWorkspace(null)
         setContacts([])
         setPipelines([])
         setActiveWsIdState('')
+        setInitialized(false)
+        try { localStorage.removeItem('azoth-active-ws') } catch {}
       }
     })
     return () => subscription.unsubscribe()
@@ -135,8 +148,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   // ── Switch workspace ──────────────────────
   const setActiveWsId = useCallback((id: string) => {
-    // Just update the ID and load data — no async in the setter
     setActiveWsIdState(id)
+    try { localStorage.setItem('azoth-active-ws', id) } catch {}
     supabase.from('workspaces').select('*').eq('id', id).single().then(({ data: ws }) => {
       if (ws) setWorkspace(ws)
     })

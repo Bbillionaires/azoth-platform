@@ -48,22 +48,54 @@ export async function POST(req: NextRequest) {
       avatar_color: accent || '#e8a045',
     })
 
-    // Create default Sales Pipeline
-    const { data: pipeline } = await supabase
-      .from('pipelines')
-      .insert({ workspace_id: ws.id, name: 'Sales Pipeline', color: '#e8a045', position: 0 })
-      .select()
-      .single()
+    // Create default pipelines
+    const defaultPipelines = [
+      {
+        name: 'Sales Pipeline', color: '#e8a045', position: 0,
+        stages: [
+          { name: 'New Lead',     color: '#555e6e', position: 0 },
+          { name: 'Contacted',    color: '#5b8ef5', position: 1 },
+          { name: 'Qualified',    color: '#9b72f5', position: 2 },
+          { name: 'Proposal',     color: '#e8a045', position: 3 },
+          { name: 'Negotiation',  color: '#f0a045', position: 4 },
+          { name: 'Won',          color: '#3ecf8e', position: 5 },
+          { name: 'Lost',         color: '#f06060', position: 6 },
+        ],
+      },
+      {
+        name: 'Lead Generation', color: '#5b8ef5', position: 1,
+        stages: [
+          { name: 'Prospect',     color: '#555e6e', position: 0 },
+          { name: 'Outreach',     color: '#5b8ef5', position: 1 },
+          { name: 'Responded',    color: '#e8a045', position: 2 },
+          { name: 'Meeting Set',  color: '#9b72f5', position: 3 },
+          { name: 'Converted',    color: '#3ecf8e', position: 4 },
+          { name: 'Not Interested', color: '#f06060', position: 5 },
+        ],
+      },
+      {
+        name: 'Customer Success', color: '#3ecf8e', position: 2,
+        stages: [
+          { name: 'Onboarding',   color: '#5b8ef5', position: 0 },
+          { name: 'Active',       color: '#3ecf8e', position: 1 },
+          { name: 'At Risk',      color: '#e8a045', position: 2 },
+          { name: 'Renewal',      color: '#9b72f5', position: 3 },
+          { name: 'Churned',      color: '#f06060', position: 4 },
+        ],
+      },
+    ]
 
-    if (pipeline) {
-      await supabase.from('stages').insert([
-        { pipeline_id: pipeline.id, name: 'Lead',        color: '#555e6e', position: 0 },
-        { pipeline_id: pipeline.id, name: 'Qualified',   color: '#5b8ef5', position: 1 },
-        { pipeline_id: pipeline.id, name: 'Proposal',    color: '#e8a045', position: 2 },
-        { pipeline_id: pipeline.id, name: 'Negotiation', color: '#9b72f5', position: 3 },
-        { pipeline_id: pipeline.id, name: 'Won',         color: '#3ecf8e', position: 4 },
-        { pipeline_id: pipeline.id, name: 'Lost',        color: '#f06060', position: 5 },
-      ])
+    for (const pl of defaultPipelines) {
+      const { data: pipeline } = await supabase
+        .from('pipelines')
+        .insert({ workspace_id: ws.id, name: pl.name, color: pl.color, position: pl.position })
+        .select()
+        .single()
+      if (pipeline) {
+        await supabase.from('stages').insert(
+          pl.stages.map(s => ({ ...s, pipeline_id: pipeline.id }))
+        )
+      }
     }
 
     return NextResponse.json({ workspace: ws }, { status: 201 })
