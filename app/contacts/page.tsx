@@ -262,6 +262,68 @@ function ContactDetail({ contact, onClose, onEdit }: { contact: Contact; onClose
   )
 }
 
+/* ── Touch Button ── */
+function TouchBtn({ contact, onUpdate }: { contact: Contact; onUpdate: (c: Contact) => Promise<void> }) {
+  const [localCount, setLocalCount] = useState<number | null>(null)
+  const [show, setShow] = useState(false)
+  const touches: { at: string }[] = (contact.custom_data as any)?.touches ?? []
+  const count = localCount ?? touches.length
+
+  const logTouch = async (e: React.MouseEvent) => {
+    e.stopPropagation()
+    const newTouches = [...touches, { at: new Date().toISOString() }]
+    const newCustomData = { ...(contact.custom_data as object ?? {}), touches: newTouches }
+    setLocalCount(newTouches.length) // optimistic update
+    await onUpdate({ ...contact, custom_data: newCustomData })
+  }
+
+  const fmt = (iso: string) => {
+    const d = new Date(iso)
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' ' +
+      d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+  }
+
+  return (
+    <div style={{ position: 'relative', display: 'inline-block' }}
+      onMouseEnter={() => setShow(true)} onMouseLeave={() => setShow(false)}>
+      <button
+        onClick={logTouch}
+        title="Log a touch"
+        style={{
+          display: 'flex', alignItems: 'center', gap: 4,
+          background: count > 0 ? 'rgba(232,160,69,.15)' : 'var(--s3)',
+          border: `1px solid ${count > 0 ? 'rgba(232,160,69,.4)' : 'var(--br)'}`,
+          borderRadius: 20, padding: '2px 8px', cursor: 'pointer',
+          fontSize: 11.5, fontWeight: 600,
+          color: count > 0 ? 'var(--acc)' : 'var(--t3)',
+          transition: 'all .15s', whiteSpace: 'nowrap',
+        }}
+      >
+        <span style={{ fontSize: 12 }}>✋</span>
+        {count > 0 ? count : '+'}
+      </button>
+      {show && touches.length > 0 && (
+        <div style={{
+          position: 'absolute', bottom: 'calc(100% + 6px)', left: '50%', transform: 'translateX(-50%)',
+          background: 'var(--s1)', border: '1px solid var(--br)', borderRadius: 8,
+          padding: '8px 10px', zIndex: 50, minWidth: 160, boxShadow: '0 4px 16px rgba(0,0,0,.2)',
+          pointerEvents: 'none',
+        }}>
+          <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--t3)', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '.4px' }}>
+            {count} touch{count !== 1 ? 'es' : ''}
+          </div>
+          {[...touches].reverse().slice(0, 5).map((t, i) => (
+            <div key={i} style={{ fontSize: 11, color: 'var(--t2)', padding: '2px 0', borderBottom: i < Math.min(count, 5) - 1 ? '1px solid var(--br)' : 'none' }}>
+              {fmt(t.at)}
+            </div>
+          ))}
+          {count > 5 && <div style={{ fontSize: 10, color: 'var(--t3)', marginTop: 3 }}>+{count - 5} more</div>}
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function ContactsPage() {
   const { contacts, pipelines, fields, addContact, updateContact, deleteContact, loading } = useApp()
   const [modal, setModal] = useState<Contact | true | null>(null)
@@ -344,12 +406,14 @@ export default function ContactsPage() {
               <thead>
                 <tr>
                   <th style={{paddingLeft:18}}>Contact</th>
+                  <th>Phone</th>
                   <th>Pipeline / Stage</th>
                   <th>Value</th>
                   <th>Source</th>
                   <th>Tags</th>
                   {customFields.map(f=><th key={f.id}>{f.name}</th>)}
                   <th>Last Contact</th>
+                  <th style={{textAlign:'center'}}>Touches</th>
                   <th style={{paddingRight:18}}></th>
                 </tr>
               </thead>
@@ -375,6 +439,16 @@ export default function ContactsPage() {
                           </div>
                         </div>
                       </td>
+                      <td onClick={e=>e.stopPropagation()}>
+                        {c.phone
+                          ? <a href={`tel:${c.phone.replace(/\s/g,'')}`}
+                              style={{fontSize:12.5,color:'var(--acc)',textDecoration:'none',whiteSpace:'nowrap',fontWeight:500}}
+                              title="Click to call — works with Google Voice & TextNow extensions">
+                              {c.phone}
+                            </a>
+                          : <span style={{fontSize:12,color:'var(--t3)'}}>—</span>
+                        }
+                      </td>
                       <td>
                         <div style={{fontSize:10.5,color:'var(--t3)',marginBottom:3}}>{pl2?.name}</div>
                         <StagePill stage={stage}/>
@@ -388,6 +462,9 @@ export default function ContactsPage() {
                       </td>
                       {customFields.map(f=><td key={f.id} style={{fontSize:12,color:'var(--t2)'}}>{(c[f.key] as string)??'—'}</td>)}
                       <td style={{fontSize:11.5,color:'var(--t3)'}}>{c.last_contact}</td>
+                      <td style={{textAlign:'center'}} onClick={e=>e.stopPropagation()}>
+                        <TouchBtn contact={c} onUpdate={updateContact} />
+                      </td>
                       <td style={{paddingRight:18}}>
                         <div className="row" style={{gap:5}} onClick={e=>e.stopPropagation()}>
                           <button className="btn btn-ghost btn-xs" onClick={()=>setModal(c)}>Edit</button>
